@@ -1,0 +1,2665 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GravityCare // Orbital Medical OS v3.0 — NASA Space Apps 2026</title>
+  <!-- Google Fonts: Space Grotesk, Inter & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            display: ['Space Grotesk', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            space: {
+              bg: '#050811',
+              panel: '#0F172A',
+              cyan: '#38BDF8',
+              nominal: '#10B981',
+              warning: '#F59E0B',
+              critical: '#EF4444',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    :root {
+      --bg-deep: #050811;
+      --panel-bg: rgba(15, 23, 42, 0.76);
+      --border-glow: rgba(56, 189, 248, 0.24);
+      --ambient-accent: rgba(16, 185, 129, 0.08);
+    }
+
+    body {
+      background-color: var(--bg-deep);
+      background-image:
+        radial-gradient(circle at 12% 14%, rgba(56, 189, 248, 0.09) 0%, transparent 42%),
+        radial-gradient(circle at 88% 82%, var(--ambient-accent) 0%, transparent 46%),
+        linear-gradient(rgba(56, 189, 248, 0.032) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(56, 189, 248, 0.032) 1px, transparent 1px);
+      background-size: 100% 100%, 100% 100%, 32px 32px, 32px 32px;
+      color: #F8FAFC;
+      overflow-x: hidden;
+      transition: background-image 0.5s ease;
+    }
+
+    body.mode-warning {
+      --ambient-accent: rgba(245, 158, 11, 0.13);
+    }
+
+    body.mode-critical {
+      --ambient-accent: rgba(239, 68, 68, 0.17);
+    }
+
+    .glass-card {
+      background: var(--panel-bg);
+      border: 1px solid var(--border-glow);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      box-shadow: 0 10px 36px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+      transition: border-color 0.35s ease, box-shadow 0.35s ease, transform 0.2s ease;
+    }
+
+    .glass-card.state-warning {
+      border-color: rgba(245, 158, 11, 0.6);
+      box-shadow: 0 0 28px rgba(245, 158, 11, 0.16), inset 0 1px 0 rgba(245, 158, 11, 0.15);
+    }
+
+    .glass-card.state-critical {
+      border-color: rgba(239, 68, 68, 0.78);
+      box-shadow: 0 0 34px rgba(239, 68, 68, 0.24), inset 0 1px 0 rgba(239, 68, 68, 0.2);
+    }
+
+    .tabular-nums {
+      font-variant-numeric: tabular-nums;
+    }
+
+    @keyframes pulseRing {
+      0% { transform: scale(0.95); opacity: 0.9; }
+      70% { transform: scale(1.75); opacity: 0; }
+      100% { transform: scale(1.75); opacity: 0; }
+    }
+
+    .pulse-dot::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: 9999px;
+      background-color: inherit;
+      animation: pulseRing 1.8s infinite;
+    }
+
+    .gauge-ring-circle {
+      transition: stroke-dashoffset 0.6s cubic-bezier(0.22, 1, 0.36, 1), stroke 0.4s ease;
+    }
+
+    .body-hotspot {
+      cursor: pointer;
+      transition: all 0.25s ease;
+    }
+    .body-hotspot:hover circle.hotspot-core {
+      r: 9;
+    }
+
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #050811; }
+    ::-webkit-scrollbar-thumb { background: #1E293B; border-radius: 9999px; }
+    ::-webkit-scrollbar-thumb:hover { background: #38BDF8; }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col font-sans antialiased selection:bg-sky-500/30 selection:text-sky-200 pb-24">
+
+  <div id="loginGate" class="fixed inset-0 z-[80] flex items-center justify-center bg-[#050811] px-4">
+    <form id="loginForm" class="glass-card w-full max-w-md rounded-3xl p-6 sm:p-8">
+      <p class="text-[10px] font-mono uppercase tracking-widest text-amber-300" data-i18n="loginKicker">Fictional demonstration · NASA Space Apps</p>
+      <h2 class="font-display font-bold text-2xl text-white mt-2">Gravity<span class="text-sky-400">Care</span></h2>
+      <p class="text-sm text-slate-400 mt-2" data-i18n="loginLead">Sign in to continue. Screens depend on your role. This prototype is not a medical device.</p>
+      <label class="block text-[11px] font-mono text-slate-400 mt-5 mb-1" for="loginEmail" data-i18n="loginEmail">Email</label>
+      <input id="loginEmail" type="email" required autocomplete="username" value="flight.surgeon@nasa.gov" class="w-full rounded-xl bg-slate-950 border border-slate-700 px-3 py-2 text-sm text-white outline-none focus:border-sky-400" />
+      <label class="block text-[11px] font-mono text-slate-400 mt-3 mb-1" for="loginPassword" data-i18n="loginPassword">Password</label>
+      <input id="loginPassword" type="password" required autocomplete="current-password" value="demo1234" class="w-full rounded-xl bg-slate-950 border border-slate-700 px-3 py-2 text-sm text-white outline-none focus:border-sky-400" />
+      <p id="loginError" class="hidden text-xs text-red-300 mt-3"></p>
+      <button type="submit" class="mt-5 w-full rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 font-display font-bold py-2.5" data-i18n="signIn">Sign in</button>
+      <div class="grid grid-cols-2 gap-2 mt-3">
+        <button type="button" class="demo-login rounded-xl border border-slate-700 px-2 py-2 text-xs text-slate-200" data-email="k.vance@nasa.gov" data-i18n="demoAstro">Astronaut demo</button>
+        <button type="button" class="demo-login rounded-xl border border-slate-700 px-2 py-2 text-xs text-slate-200" data-email="flight.surgeon@nasa.gov" data-i18n="demoDoc">Physician demo</button>
+        <button type="button" class="demo-login rounded-xl border border-slate-700 px-2 py-2 text-xs text-slate-200" data-email="ground.ops@nasa.gov" data-i18n="demoGround">Ground demo</button>
+        <button type="button" class="demo-login rounded-xl border border-slate-700 px-2 py-2 text-xs text-slate-200" data-email="admin@gravitycare.space" data-i18n="demoAdmin">Admin demo</button>
+      </div>
+      <div class="mt-4 text-[11px] font-mono text-slate-500 leading-relaxed">
+        <div><span data-i18n="roleAstronaut">Astronaut</span> · k.vance@nasa.gov</div>
+        <div><span data-i18n="roleDoctor">Flight surgeon</span> · flight.surgeon@nasa.gov</div>
+        <div><span data-i18n="roleGround">Ground crew</span> · ground.ops@nasa.gov</div>
+        <div><span data-i18n="roleAdmin">Administrator</span> · admin@gravitycare.space</div>
+        <div data-i18n="demoPasswordNote">Password for every demo account: demo1234</div>
+      </div>
+    </form>
+  </div>
+
+  <!-- =======================================================================
+       TOP MISSION TELEMETRY & CREW SWITCHER HEADER
+  ======================================================================== -->
+  <header class="sticky top-0 z-40 glass-card border-x-0 border-t-0 rounded-none px-4 lg:px-6 py-2.5">
+    <div class="max-w-[1680px] mx-auto flex flex-col gap-2.5">
+      
+      <!-- Row 1: Brand, Active Crew Selector Pill, Edge AI & Language Switcher -->
+      <div class="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-2.5">
+        
+        <!-- Brand + Active Astronaut Quick Switcher -->
+        <div class="flex flex-wrap items-center justify-between sm:justify-start gap-3">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-sky-500/25 to-emerald-500/15 border border-sky-400/40 flex items-center justify-center shadow-inner relative shrink-0">
+              <svg class="w-6 h-6 text-sky-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="9" stroke-dasharray="4 2" opacity="0.65"/>
+                <path d="M12 8v8M8 12h8" stroke-linecap="round"/>
+                <circle cx="19" cy="5.5" r="1.5" fill="#10B981" stroke="none"/>
+              </svg>
+            </div>
+            <div>
+              <div class="flex items-center gap-2 flex-wrap">
+                <h1 class="font-display font-bold text-lg tracking-wide text-white leading-none">
+                  GRAVITY<span class="text-sky-400">CARE</span>
+                </h1>
+                <span class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-sky-500/15 border border-sky-400/35 text-sky-300 font-semibold">
+                  OS v3.0
+                </span>
+              </div>
+              <p class="text-[11px] text-slate-400 font-mono mt-1">
+                <span>ARTEMIS-IV / GATEWAY</span> &bull;
+                <span id="metClock" class="text-slate-200 tabular-nums">MET: 142d 08h 41m 12s</span>
+              </p>
+            </div>
+          </div>
+
+          <!-- Quick Crew Member Pills (4 Astronauts) -->
+          <div class="flex items-center gap-1.5 bg-slate-950/90 p-1 rounded-xl border border-slate-800/90 overflow-x-auto max-w-full" id="topCrewPills">
+            <!-- Populated by JS -->
+          </div>
+        </div>
+
+        <!-- Center Telemetry Badges + Right Navigation & Lang Switcher -->
+        <div class="flex flex-wrap items-center justify-between xl:justify-end gap-2">
+          <!-- Edge AI & Latency -->
+          <div class="hidden md:flex items-center gap-2 text-[11px] font-mono">
+            <div class="flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-slate-950/80 border border-emerald-500/35">
+              <span class="relative flex h-2 w-2">
+                <span class="pulse-dot absolute inline-flex h-full w-full rounded-full bg-emerald-400"></span>
+                <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+              </span>
+              <span class="text-emerald-300 font-semibold" data-i18n="edgeAiBadge">MED-GEMMA EDGE: ACTIVE</span>
+            </div>
+
+            <div class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-slate-950/80 border border-amber-500/35">
+              <span class="w-2 h-2 rounded-full bg-amber-400"></span>
+              <span class="text-slate-300">
+                <span data-i18n="latencyLabel">OWLT:</span>
+                <strong class="text-amber-300 tabular-nums">14m 22s</strong>
+              </span>
+            </div>
+          </div>
+
+          <!-- 4-Tab Navigation Switcher -->
+          <nav class="flex items-center gap-1 bg-slate-950/90 p-1 rounded-xl border border-slate-800/90 overflow-x-auto" aria-label="Navigation">
+            <span id="sessionRole" class="text-[10px] font-mono px-2 py-1 rounded-full border border-slate-700 text-slate-300"></span>
+            <button onclick="switchView('ward')" id="tab-ward" class="nav-tab hidden px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-display font-semibold text-slate-400 border border-transparent whitespace-nowrap">Ward</button>
+            <button onclick="switchView('cockpit')" id="tab-cockpit" class="nav-tab px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-display font-semibold transition-all bg-sky-500/20 text-sky-300 border border-sky-400/40 whitespace-nowrap">
+              Dashboard
+            </button>
+            <button onclick="switchView('crew')" id="tab-crew" class="nav-tab px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-display font-semibold transition-all text-slate-400 hover:text-white border border-transparent whitespace-nowrap flex items-center gap-1.5">
+              <span class="w-2 h-2 rounded-full bg-sky-400"></span>
+              <span data-i18n="navCrew">2. Astronaut Profiles (4)</span>
+            </button>
+            <button onclick="switchView('emergency')" id="tab-emergency" class="nav-tab px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-display font-semibold transition-all text-slate-400 hover:text-white border border-transparent whitespace-nowrap flex items-center gap-1.5">
+              <span id="emergencyTabDot" class="hidden w-2 h-2 rounded-full bg-red-500 animate-ping"></span>
+              <span data-i18n="navEmergency">3. CMO Emergency</span>
+            </button>
+            <button onclick="switchView('dualuse')" id="tab-dualuse" class="nav-tab px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-display font-semibold transition-all text-slate-400 hover:text-white border border-transparent whitespace-nowrap">
+              4. Earth Dual-Use (CSA)
+            </button>
+            <button onclick="switchView('nutrition')" id="tab-nutrition" class="nav-tab px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-display font-semibold transition-all text-slate-400 hover:text-white border border-transparent whitespace-nowrap">Nutrition</button>
+            <button onclick="switchView('alerts')" id="tab-alerts" class="nav-tab px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-display font-semibold transition-all text-slate-400 hover:text-white border border-transparent whitespace-nowrap">Alerts</button>
+            <button onclick="switchView('messages')" id="tab-messages" class="nav-tab px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-display font-semibold transition-all text-slate-400 hover:text-white border border-transparent whitespace-nowrap">Messages</button>
+            <button onclick="switchView('ground')" id="tab-ground" class="nav-tab hidden px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-display font-semibold transition-all text-slate-400 hover:text-white border border-transparent whitespace-nowrap">Ground</button>
+            <button onclick="switchView('admin')" id="tab-admin" class="nav-tab hidden px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-display font-semibold transition-all text-slate-400 hover:text-white border border-transparent whitespace-nowrap">Admin</button>
+            <button type="button" id="logoutBtn" class="px-2.5 py-1.5 rounded-lg text-xs font-mono text-slate-300 border border-slate-700">Log out</button>
+          </nav>
+
+          <!-- Sleek Pill Language Switcher -->
+          <div class="flex items-center bg-slate-950/95 p-1 rounded-full border border-sky-400/35 shadow-lg shadow-sky-950/30" role="group" aria-label="Language Switcher">
+            <button onclick="setLanguage('en')" class="lang-btn-en px-2.5 py-1 rounded-full text-[11px] font-mono font-bold transition-all">EN</button>
+            <button onclick="setLanguage('fr')" class="lang-btn-fr px-2.5 py-1 rounded-full text-[11px] font-mono font-bold transition-all">FR</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- GLOBAL ALERT BANNER (Dynamic when in Warning/Critical scenario) -->
+  <div id="globalAlertBanner" class="hidden max-w-[1680px] w-full mx-auto px-4 lg:px-6 pt-3.5">
+    <div id="globalAlertInner" class="rounded-2xl p-3.5 border flex flex-col sm:flex-row sm:items-center justify-between gap-3 backdrop-blur-md">
+      <div class="flex items-center gap-3">
+        <div class="p-2 rounded-xl bg-red-500/20 text-red-400 shrink-0">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+          </svg>
+        </div>
+        <div>
+          <p id="alertBannerTitle" class="font-display font-bold text-xs sm:text-sm uppercase tracking-wider text-red-300"></p>
+          <p id="alertBannerDesc" class="text-xs text-slate-300 mt-0.5"></p>
+        </div>
+      </div>
+      <button onclick="switchView('emergency')" class="px-4 py-2 rounded-xl bg-red-500 hover:bg-red-400 text-slate-950 font-display font-bold text-xs uppercase tracking-wider transition-colors shrink-0" data-i18n="openCmoBtn">
+        Open CMO Protocol &rarr;
+      </button>
+    </div>
+  </div>
+
+  <!-- =======================================================================
+       MAIN CONTENT CONTAINER
+  ======================================================================== -->
+  <main class="flex-1 max-w-[1680px] w-full mx-auto px-4 lg:px-6 pt-4">
+
+    <!-- =====================================================================
+         VIEW 1: COCKPIT OVERVIEW (3-COLUMN TACTICAL GRID)
+    ====================================================================== -->
+    <section id="view-cockpit" class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+
+      <!-- LEFT COLUMN (4 cols): ACTIVE ASTRONAUT MINI-CARD + NASA HRP 5 HAZARDS -->
+      <div class="lg:col-span-4 flex flex-col gap-4">
+        
+        <!-- Active Astronaut Telemetry Identity Strip -->
+        <div class="glass-card rounded-2xl p-4 flex items-center justify-between gap-3">
+          <div class="flex items-center gap-3 min-w-0">
+            <div id="cockpitAstroAvatar" class="w-12 h-12 rounded-2xl bg-gradient-to-br from-sky-500/30 to-indigo-600/30 border border-sky-400/50 flex items-center justify-center font-display font-bold text-base text-white shrink-0 shadow-inner">
+              KV
+            </div>
+            <div class="min-w-0">
+              <div class="flex items-center gap-2">
+                <h2 id="cockpitAstroName" class="font-display font-bold text-sm sm:text-base text-white truncate">CDR. K. Vance</h2>
+                <span id="cockpitAstroAgency" class="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-sky-500/20 text-sky-300 border border-sky-400/30 shrink-0">NASA</span>
+              </div>
+              <p id="cockpitAstroRole" class="text-xs text-slate-400 truncate mt-0.5"></p>
+              <div class="flex items-center gap-2.5 mt-1 text-[10px] font-mono text-slate-300">
+                <span id="cockpitAstroBlood">O+</span>
+                <span>&bull;</span>
+                <span id="cockpitAstroSleep">Sleep: 7.4h</span>
+                <span>&bull;</span>
+                <span id="cockpitAstroBp">BP: 118/76</span>
+              </div>
+            </div>
+          </div>
+          <button onclick="switchView('crew')" class="px-3 py-2 rounded-xl bg-sky-500/15 hover:bg-sky-500/25 border border-sky-400/35 text-sky-300 font-display font-semibold text-xs shrink-0 transition-colors" data-i18n="viewDossierBtn">
+            Dossier &rarr;
+          </button>
+        </div>
+
+        <!-- NASA HRP 5 Hazards Card -->
+        <div id="ridgePanelCard" class="glass-card rounded-2xl p-4 sm:p-5 flex-1 flex flex-col justify-between">
+          <div>
+            <!-- Header + Animated SVG Radial Gauge -->
+            <div class="flex items-center justify-between border-b border-slate-800/90 pb-3.5 mb-3.5 gap-3">
+              <div>
+                <span class="text-[10px] font-mono uppercase tracking-widest text-sky-400" data-i18n="hrpEyebrow">NASA HRP FRAMEWORK</span>
+                <h2 class="font-display font-bold text-base text-white leading-snug" data-i18n="hrpTitle">5 Spaceflight Hazards (RIDGE-5)</h2>
+                <span id="ridgeStatusPill" class="inline-block mt-1 font-mono font-bold text-[11px] px-2 py-0.5 rounded-md bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                  NOMINAL ENVELOPE
+                </span>
+              </div>
+
+              <!-- Animated SVG Composite Risk Dial -->
+              <div class="relative w-16 h-16 flex items-center justify-center shrink-0">
+                <svg class="w-16 h-16 -rotate-90" viewBox="0 0 64 64">
+                  <circle cx="32" cy="32" r="26" fill="none" stroke="#1E293B" stroke-width="5.5" />
+                  <circle id="ridgeGaugeCircle" class="gauge-ring-circle" cx="32" cy="32" r="26" fill="none"
+                    stroke="#10B981" stroke-width="5.5" stroke-linecap="round"
+                    stroke-dasharray="163.36" stroke-dashoffset="133.95" />
+                </svg>
+                <div class="absolute inset-0 flex flex-col items-center justify-center">
+                  <span id="ridgeScoreNumber" class="font-mono font-bold text-sm text-white tabular-nums leading-none">18</span>
+                  <span class="font-mono text-[8px] text-slate-400 uppercase mt-0.5" data-i18n="riskWord">RISK</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- 5 Interactive Hazard Meters -->
+            <div class="space-y-2.5">
+              <!-- Hazard 1: Space Radiation (CSA-RadGuard) -->
+              <div class="p-3 rounded-xl bg-slate-950/65 border border-slate-800/90 hover:border-sky-500/35 transition-colors">
+                <div class="flex items-center justify-between mb-1">
+                  <span class="text-xs font-semibold text-slate-200 flex items-center gap-1.5">
+                    <span class="w-2 h-2 rounded-full bg-emerald-400" id="dot-radiation"></span>
+                    <span data-i18n="h1Name">1. Space Radiation</span>
+                    <span class="text-[9px] font-mono text-sky-300 bg-sky-500/15 border border-sky-400/25 px-1.5 py-0.5 rounded">CSA-RADGUARD</span>
+                  </span>
+                  <span id="radRateText" class="font-mono text-xs font-bold text-emerald-400 tabular-nums">18.4 &mu;Sv/h</span>
+                </div>
+                <div class="flex justify-between text-[11px] font-mono text-slate-400 mb-1.5">
+                  <span data-i18n="h1Sub">Individual Dose vs 600 mSv Career Limit</span>
+                  <span id="radCumText" class="text-slate-200 tabular-nums">148.4 / 600 mSv</span>
+                </div>
+                <div class="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                  <div id="radBar" class="h-full bg-emerald-400 rounded-full transition-all duration-500" style="width: 24.7%"></div>
+                </div>
+              </div>
+
+              <!-- Hazard 2: Altered Gravity -->
+              <div class="p-3 rounded-xl bg-slate-950/65 border border-slate-800/90 hover:border-sky-500/35 transition-colors">
+                <div class="flex items-center justify-between mb-1">
+                  <span class="text-xs font-semibold text-slate-200 flex items-center gap-1.5">
+                    <span class="w-2 h-2 rounded-full bg-emerald-400" id="dot-gravity"></span>
+                    <span data-i18n="h2Name">2. Altered Gravity (Microgravity)</span>
+                  </span>
+                  <span id="gravStatusText" class="font-mono text-xs font-bold text-emerald-400 tabular-nums">85% ARED</span>
+                </div>
+                <div class="flex justify-between text-[11px] font-mono text-slate-400 mb-1.5">
+                  <span data-i18n="h2Sub">Resistive Load &amp; Cephalic Fluid Shift</span>
+                  <span id="gravDetailText" class="text-slate-200 tabular-nums">102 / 120 min</span>
+                </div>
+                <div class="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                  <div id="gravBar" class="h-full bg-emerald-400 rounded-full transition-all duration-500" style="width: 85%"></div>
+                </div>
+              </div>
+
+              <!-- Hazard 3: Closed Environment -->
+              <div class="p-3 rounded-xl bg-slate-950/65 border border-slate-800/90 hover:border-sky-500/35 transition-colors">
+                <div class="flex items-center justify-between mb-1">
+                  <span class="text-xs font-semibold text-slate-200 flex items-center gap-1.5">
+                    <span class="w-2 h-2 rounded-full bg-emerald-400" id="dot-environment"></span>
+                    <span data-i18n="h3Name">3. Closed Environment (ECLSS)</span>
+                  </span>
+                  <span id="co2Text" class="font-mono text-xs font-bold text-emerald-400 tabular-nums">CO2: 0.38%</span>
+                </div>
+                <div class="flex justify-between text-[11px] font-mono text-slate-400 mb-1.5">
+                  <span>O2: <strong id="o2Text" class="text-slate-200">21.1%</strong> &bull; 101.3 kPa &bull; RH 44%</span>
+                  <span id="envQualityText" class="text-emerald-400 font-semibold">NOMINAL</span>
+                </div>
+                <div class="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                  <div id="co2Bar" class="h-full bg-emerald-400 rounded-full transition-all duration-500" style="width: 38%"></div>
+                </div>
+              </div>
+
+              <!-- Hazard 4: Isolation & Confinement -->
+              <div class="p-3 rounded-xl bg-slate-950/65 border border-slate-800/90 hover:border-sky-500/35 transition-colors">
+                <div class="flex items-center justify-between mb-1">
+                  <span class="text-xs font-semibold text-slate-200 flex items-center gap-1.5">
+                    <span class="w-2 h-2 rounded-full bg-emerald-400" id="dot-isolation"></span>
+                    <span data-i18n="h4Name">4. Isolation &amp; Cognitive Load</span>
+                  </span>
+                  <span id="cogScoreText" class="font-mono text-xs font-bold text-emerald-400 tabular-nums">92% VIGILANCE</span>
+                </div>
+                <div class="flex justify-between text-[11px] font-mono text-slate-400 mb-1.5">
+                  <span data-i18n="h4Sub">NASA-TLX Workload &amp; Sleep Efficiency</span>
+                  <span id="circadianText" class="text-slate-200" data-i18n="circadianAligned">ALIGNED</span>
+                </div>
+                <div class="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                  <div id="cogBar" class="h-full bg-sky-400 rounded-full transition-all duration-500" style="width: 92%"></div>
+                </div>
+              </div>
+
+              <!-- Hazard 5: Distance from Earth -->
+              <div class="p-3 rounded-xl bg-slate-950/65 border border-slate-800/90 hover:border-sky-500/35 transition-colors">
+                <div class="flex items-center justify-between mb-1">
+                  <span class="text-xs font-semibold text-slate-200 flex items-center gap-1.5">
+                    <span class="w-2 h-2 rounded-full bg-sky-400"></span>
+                    <span data-i18n="h5Name">5. Distance from Earth</span>
+                  </span>
+                  <span class="font-mono text-xs font-bold text-sky-400 tabular-nums">384,400+ KM</span>
+                </div>
+                <div class="flex justify-between text-[11px] font-mono text-slate-400">
+                  <span data-i18n="h5Sub">Store-and-Forward Buffer: Ready</span>
+                  <span class="text-emerald-400 font-semibold" data-i18n="h5Queue">2 PKTS QUEUED</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-3 pt-2.5 border-t border-slate-800/80 flex items-center justify-between text-[10px] text-slate-400 font-mono">
+            <span>DATA: NASA HRP &amp; CSA ASC</span>
+            <span class="text-sky-400" data-i18n="offlineStorage">LOCAL FHIR VAULT: ENCRYPTED</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- CENTER COLUMN (4 cols): LIVE BIOMETRICS, ECG & SANS OCULAR -->
+      <div class="lg:col-span-4 flex flex-col gap-4">
+        <!-- Real-Time ECG Waveform & Vitals Card -->
+        <div id="biometricsCard" class="glass-card rounded-2xl p-4 sm:p-5">
+          <div class="flex items-center justify-between mb-3">
+            <div>
+              <span class="text-[10px] font-mono uppercase tracking-widest text-sky-400" data-i18n="bioEyebrow">BIOSENSOR SUITE // LEAD II</span>
+              <h2 class="font-display font-bold text-base text-white" data-i18n="bioTitle">Live Astronaut Biometrics</h2>
+            </div>
+            <span id="ecgRhythmBadge" class="font-mono text-[11px] font-semibold px-2.5 py-1 rounded-lg bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+              SINUS RHYTHM
+            </span>
+          </div>
+
+          <!-- HTML5 Canvas ECG -->
+          <div class="relative rounded-xl bg-[#03050B] border border-slate-800/90 overflow-hidden h-36 mb-3.5 shadow-inner">
+            <canvas id="ecgCanvas" class="w-full h-full block"></canvas>
+            <div class="absolute top-2 left-2.5 text-[10px] font-mono text-slate-500">25 mm/s &bull; 10 mm/mV</div>
+            <div id="liveBpmOverlay" class="absolute top-2 right-3 font-mono text-sm font-bold text-emerald-400 tabular-nums">
+              68 BPM
+            </div>
+          </div>
+
+          <!-- 6 Vital Sign Cards Grid (HR, SpO2, HRV, Blood Pressure, Glucose, Temp) -->
+          <div class="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+            <!-- Heart Rate -->
+            <div class="p-3 rounded-xl bg-slate-950/70 border border-slate-800/90">
+              <div class="flex items-center justify-between text-[11px] text-slate-400 mb-1">
+                <span data-i18n="vitalHrLabel">Heart Rate</span>
+              </div>
+              <div class="flex items-baseline gap-1">
+                <span id="vital-hr" class="font-mono text-xl font-bold text-white tabular-nums">68</span>
+                <span class="font-mono text-[10px] text-slate-400">BPM</span>
+              </div>
+              <span id="vital-hr-trend" class="text-[10px] font-mono text-emerald-400 block mt-0.5 truncate"></span>
+            </div>
+
+            <!-- SpO2 -->
+            <div class="p-3 rounded-xl bg-slate-950/70 border border-slate-800/90">
+              <div class="flex items-center justify-between text-[11px] text-slate-400 mb-1">
+                <span data-i18n="vitalSpo2Label">SpO2</span>
+              </div>
+              <div class="flex items-baseline gap-1">
+                <span id="vital-spo2" class="font-mono text-xl font-bold text-white tabular-nums">98</span>
+                <span class="font-mono text-[10px] text-slate-400">%</span>
+              </div>
+              <span id="vital-spo2-trend" class="text-[10px] font-mono text-emerald-400 block mt-0.5 truncate"></span>
+            </div>
+
+            <!-- HRV -->
+            <div class="p-3 rounded-xl bg-slate-950/70 border border-slate-800/90">
+              <div class="flex items-center justify-between text-[11px] text-slate-400 mb-1">
+                <span data-i18n="vitalHrvLabel">HRV</span>
+              </div>
+              <div class="flex items-baseline gap-1">
+                <span id="vital-hrv" class="font-mono text-xl font-bold text-white tabular-nums">64</span>
+                <span class="font-mono text-[10px] text-slate-400">ms</span>
+              </div>
+              <span id="vital-hrv-trend" class="text-[10px] font-mono text-emerald-400 block mt-0.5 truncate"></span>
+            </div>
+
+            <!-- Blood Pressure -->
+            <div class="p-3 rounded-xl bg-slate-950/70 border border-slate-800/90">
+              <div class="flex items-center justify-between text-[11px] text-slate-400 mb-1">
+                <span data-i18n="vitalBpLabel">Blood Press.</span>
+              </div>
+              <div class="flex items-baseline gap-1">
+                <span id="vital-bp" class="font-mono text-lg font-bold text-white tabular-nums">118/76</span>
+              </div>
+              <span class="text-[10px] font-mono text-slate-400 block mt-0.5">mmHg</span>
+            </div>
+
+            <!-- Blood Glucose -->
+            <div class="p-3 rounded-xl bg-slate-950/70 border border-slate-800/90">
+              <div class="flex items-center justify-between text-[11px] text-slate-400 mb-1">
+                <span data-i18n="vitalGlucoseLabel">Glucose</span>
+              </div>
+              <div class="flex items-baseline gap-1">
+                <span id="vital-glucose" class="font-mono text-xl font-bold text-white tabular-nums">94</span>
+                <span class="font-mono text-[10px] text-slate-400">mg/dL</span>
+              </div>
+              <span class="text-[10px] font-mono text-emerald-400 block mt-0.5" data-i18n="metabolicOk">Metabolic OK</span>
+            </div>
+
+            <!-- Core Temp -->
+            <div class="p-3 rounded-xl bg-slate-950/70 border border-slate-800/90">
+              <div class="flex items-center justify-between text-[11px] text-slate-400 mb-1">
+                <span data-i18n="vitalTempLabel">Core Temp</span>
+              </div>
+              <div class="flex items-baseline gap-1">
+                <span id="vital-temp" class="font-mono text-xl font-bold text-white tabular-nums">36.8</span>
+                <span class="font-mono text-[10px] text-slate-400">&deg;C</span>
+              </div>
+              <span id="vital-temp-trend" class="text-[10px] font-mono text-emerald-400 block mt-0.5 truncate"></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- SANS (Spaceflight-Associated Neuro-ocular Syndrome) Module -->
+        <div class="glass-card rounded-2xl p-4 sm:p-5 flex-1 flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <div>
+                <span class="text-[10px] font-mono uppercase tracking-widest text-sky-400" data-i18n="sansEyebrow">MICROGRAVITY OPHTHALMOLOGY</span>
+                <h3 class="font-display font-bold text-sm text-white" data-i18n="sansTitle">SANS Ocular &amp; Cephalic Fluid Monitor</h3>
+              </div>
+              <span id="sansBadge" class="font-mono text-[11px] font-semibold px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                IOP: 15 mmHg (OK)
+              </span>
+            </div>
+            <p id="sansDesc" class="text-xs text-slate-300 leading-relaxed mb-3" data-i18n="sansDefaultDesc">
+              Intraocular pressure &amp; OCT retinal nerve fiber layer stable. Next Amsler grid self-check scheduled in 18h.
+            </p>
+          </div>
+          <div class="flex items-center justify-between gap-2 pt-2 border-t border-slate-800/70">
+            <span class="text-[11px] font-mono text-slate-400">
+              <span data-i18n="amslerLabel">Amsler Score:</span>
+              <strong id="amslerScore" class="text-slate-200">0/10</strong>
+            </span>
+            <button onclick="runQuickOcularCheck()" class="px-3 py-1.5 rounded-lg bg-sky-500/15 hover:bg-sky-500/25 text-sky-300 border border-sky-400/35 text-xs font-display font-semibold transition-colors" data-i18n="ocularBtn">
+              Run 10s Ocular Check
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT COLUMN (4 cols): MED-GEMMA AI CLINICAL COPILOT -->
+      <div class="lg:col-span-4 flex flex-col">
+        <div id="copilotCard" class="glass-card rounded-2xl p-4 sm:p-5 flex-1 flex flex-col justify-between">
+          <div>
+            <!-- Header -->
+            <div class="flex items-center justify-between border-b border-slate-800/90 pb-3 mb-3.5">
+              <div class="flex items-center gap-2.5">
+                <div class="w-8 h-8 rounded-lg bg-sky-500/20 border border-sky-400/40 flex items-center justify-center text-sky-300 font-mono font-bold text-xs shadow-inner">
+                  AI
+                </div>
+                <div>
+                  <h2 class="font-display font-bold text-base text-white" data-i18n="copilotTitle">GravityCare Clinical Copilot</h2>
+                  <span class="text-[10px] font-mono text-sky-400" data-i18n="copilotSub">Multi-Modal Edge Inference &bull; 42ms latency</span>
+                </div>
+              </div>
+              <span id="aiConfidenceBadge" class="font-mono text-[11px] font-semibold px-2 py-0.5 rounded bg-sky-500/15 text-sky-300 border border-sky-400/30">
+                CONF: 98.4%
+              </span>
+            </div>
+
+            <!-- Explainable Diagnostic Synthesis -->
+            <div class="p-3.5 rounded-xl bg-slate-950/75 border border-sky-500/30 mb-3.5">
+              <div class="flex items-center justify-between mb-1.5">
+                <span class="text-[10px] font-mono uppercase tracking-wider text-sky-400 font-semibold" data-i18n="synthesisHeader">
+                  &bull; Personalized Multi-Sensor Correlation
+                </span>
+                <span id="aiSeverityTag" class="text-[10px] font-mono px-2 py-0.5 rounded font-bold bg-emerald-500/20 text-emerald-300">
+                  ROUTINE
+                </span>
+              </div>
+              <p id="aiSynthesisText" class="text-xs sm:text-[13px] text-slate-200 leading-relaxed"></p>
+            </div>
+
+            <!-- Actionable Countermeasures Checklist + Progress Bar -->
+            <div class="mb-3.5">
+              <div class="flex items-center justify-between mb-1.5">
+                <h3 class="text-[11px] font-mono uppercase tracking-wider text-slate-400" data-i18n="countermeasuresHeader">Recommended Countermeasures</h3>
+                <span id="checklistCounter" class="text-[11px] font-mono text-sky-400 font-semibold">1/3</span>
+              </div>
+              <div class="w-full h-1 bg-slate-800 rounded-full overflow-hidden mb-2.5">
+                <div id="checklistProgressBar" class="h-full bg-sky-400 transition-all duration-300" style="width: 33%"></div>
+              </div>
+              <div id="countermeasuresList" class="space-y-2">
+                <!-- Populated by JS -->
+              </div>
+            </div>
+          </div>
+
+          <!-- Voice / Symptom Log Simulator -->
+          <div class="pt-3 border-t border-slate-800/80">
+            <label for="symptomInput" class="block text-[10px] font-mono uppercase tracking-wider text-slate-400 mb-1.5" data-i18n="symptomLabel">
+              Crew Symptom Log / Edge NLP Triage Query
+            </label>
+            <div class="flex gap-2 mb-2">
+              <input
+                id="symptomInput"
+                type="text"
+                class="flex-1 bg-slate-950/90 border border-slate-700 focus:border-sky-400 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 outline-none"
+              />
+              <button onclick="parseSymptomLog()" class="px-3.5 py-2 rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 font-display font-bold text-xs transition-colors shrink-0" data-i18n="analyzeBtn">
+                Analyze
+              </button>
+            </div>
+            <!-- Quick Preset Pills -->
+            <div class="flex flex-wrap gap-1.5 mb-2">
+              <button onclick="fillSymptom('preset1')" class="text-[10px] font-mono px-2 py-1 rounded-md bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-700 transition-colors" data-i18n="presetChip1">
+                + "Headache &amp; EVA fatigue"
+              </button>
+              <button onclick="fillSymptom('preset2')" class="text-[10px] font-mono px-2 py-1 rounded-md bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-700 transition-colors" data-i18n="presetChip2">
+                + "Blurred near vision (SANS)"
+              </button>
+            </div>
+            <!-- Structured Biomarker Output -->
+            <div id="symptomParsedOutput" class="hidden p-2.5 rounded-xl bg-sky-950/45 border border-sky-500/35 text-[11px] font-mono text-sky-200"></div>
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- =====================================================================
+         VIEW 2: ASTRONAUT PROFILES & BIOMETRIC DOSSIER (NEW!)
+    ====================================================================== -->
+    <section id="view-crew" class="hidden space-y-4">
+      
+      <!-- 4 Crew Member Cards Grid -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3.5" id="crewCardsGrid">
+        <!-- Populated dynamically by JS -->
+      </div>
+
+      <!-- Detailed Individual Dossier + Anatomical Body System Map + 7-Day Trends -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+        
+        <!-- Left (5 cols): Interactive Anatomical Body System Health Map -->
+        <div class="lg:col-span-5 glass-card rounded-2xl p-5 flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-3">
+              <div>
+                <span class="text-[10px] font-mono uppercase tracking-widest text-sky-400" data-i18n="anatEyebrow">PHYSIOLOGICAL SYSTEM TELEMETRY</span>
+                <h3 class="font-display font-bold text-base text-white" data-i18n="anatTitle">Interactive Body System Health Map</h3>
+              </div>
+              <span id="bodyMapWho" class="text-[10px] font-mono text-slate-300"></span>
+            </div>
+            <div class="flex flex-wrap gap-3 mt-3 text-[10px] font-mono text-slate-300">
+              <span class="inline-flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-emerald-400"></span><span data-i18n="legendNominal">Stable</span></span>
+              <span class="inline-flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-amber-400"></span><span data-i18n="legendWatch">Watch</span></span>
+              <span class="inline-flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-red-400"></span><span data-i18n="legendAlert">Alert</span></span>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-12 gap-4 items-center">
+              <!-- Stylized Futuristic Human Silhouette SVG with Clickable Hotspots -->
+              <div class="sm:col-span-5 flex justify-center bg-slate-950/75 rounded-2xl border border-slate-800/90 p-3 relative">
+                <svg class="w-40 h-64" viewBox="0 0 160 260" fill="none">
+                  <!-- Scanning grid lines -->
+                  <line x1="10" y1="40" x2="150" y2="40" stroke="rgba(56,189,248,0.12)" stroke-dasharray="3 3"/>
+                  <line x1="10" y1="100" x2="150" y2="100" stroke="rgba(56,189,248,0.12)" stroke-dasharray="3 3"/>
+                  <line x1="10" y1="175" x2="150" y2="175" stroke="rgba(56,189,248,0.12)" stroke-dasharray="3 3"/>
+                  <!-- Stylized Astronaut Silhouette -->
+                  <circle cx="80" cy="30" r="18" stroke="#38BDF8" stroke-width="1.5" fill="rgba(56,189,248,0.08)"/>
+                  <path d="M52 62 C52 54, 108 54, 108 62 L118 122 L104 126 L98 84 L98 148 L106 238 L88 238 L80 164 L72 238 L54 238 L62 148 L62 84 L56 126 L42 122 Z"
+                        stroke="#38BDF8" stroke-width="1.5" fill="rgba(56,189,248,0.06)" stroke-linejoin="round"/>
+
+                  <!-- Hotspot 1: Neuro-Ocular / SANS (Head) -->
+                  <g class="body-hotspot" data-zone="neuro" onclick="selectBodySystem('neuro')">
+                    <circle class="zone-glow" cx="80" cy="28" r="13" fill="rgba(16,185,129,0.22)" />
+                    <circle class="hotspot-core" cx="80" cy="28" r="6" fill="#10B981" stroke="#050811" stroke-width="2" />
+                  </g>
+                  <g class="body-hotspot" data-zone="cardio" onclick="selectBodySystem('cardio')">
+                    <circle class="zone-glow" cx="86" cy="82" r="14" fill="rgba(16,185,129,0.22)" />
+                    <circle class="hotspot-core" cx="86" cy="82" r="6" fill="#10B981" stroke="#050811" stroke-width="2" />
+                  </g>
+                  <g class="body-hotspot" data-zone="metabolic" onclick="selectBodySystem('metabolic')">
+                    <circle class="zone-glow" cx="76" cy="118" r="13" fill="rgba(16,185,129,0.22)" />
+                    <circle class="hotspot-core" cx="76" cy="118" r="6" fill="#10B981" stroke="#050811" stroke-width="2" />
+                  </g>
+                  <g class="body-hotspot" data-zone="radiation" onclick="selectBodySystem('radiation')">
+                    <circle class="zone-glow" cx="111" cy="104" r="13" fill="rgba(16,185,129,0.22)" />
+                    <circle class="hotspot-core" cx="111" cy="104" r="6" fill="#10B981" stroke="#050811" stroke-width="2" />
+                  </g>
+                  <g class="body-hotspot" data-zone="musculo" onclick="selectBodySystem('musculo')">
+                    <circle class="zone-glow" cx="66" cy="192" r="14" fill="rgba(16,185,129,0.22)" />
+                    <circle class="hotspot-core" cx="66" cy="192" r="6" fill="#10B981" stroke="#050811" stroke-width="2" />
+                  </g>
+                </svg>
+              </div>
+
+              <!-- Selected Body System Diagnostic Readout -->
+              <div class="sm:col-span-7 space-y-2.5">
+                <div class="flex flex-wrap gap-1.5" id="bodySystemButtons">
+                  <!-- Populated by JS -->
+                </div>
+                <div class="p-3.5 rounded-xl bg-slate-950/80 border border-sky-500/35">
+                  <div class="flex items-center justify-between mb-1">
+                    <h4 id="bodySysTitle" class="font-display font-bold text-sm text-white"></h4>
+                    <span id="bodySysBadge" class="font-mono text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300"></span>
+                  </div>
+                  <p id="bodySysMetrics" class="font-mono text-xs text-sky-300 mb-2"></p>
+                  <p id="bodySysDesc" class="text-xs text-slate-300 leading-relaxed"></p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-4 pt-3 border-t border-slate-800 flex items-center justify-between text-[11px] font-mono text-slate-400">
+            <span id="dossierFlightHours">Flight Exp: 4,210 hrs</span>
+            <span id="dossierBaselineNote" class="text-sky-400">Baseline HRV: 65ms</span>
+          </div>
+        </div>
+
+        <!-- Right (7 cols): Full Medical Profile, 7-Day Telemetry Trend & Readiness Streak -->
+        <div class="lg:col-span-7 glass-card rounded-2xl p-5 flex flex-col justify-between gap-4">
+          <div>
+            <!-- Profile Header Banner -->
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-4 mb-4">
+              <div class="flex items-center gap-3.5">
+                <div id="dossierAvatar" class="w-14 h-14 rounded-2xl bg-gradient-to-br from-sky-500/35 to-emerald-500/20 border border-sky-400/50 flex items-center justify-center font-display font-bold text-xl text-white shrink-0">
+                  KV
+                </div>
+                <div>
+                  <div class="flex items-center gap-2 flex-wrap">
+                    <h2 id="dossierFullName" class="font-display font-bold text-lg sm:text-xl text-white">CDR. Kathryn Vance</h2>
+                    <span id="dossierAgencyTag" class="font-mono text-xs font-bold px-2 py-0.5 rounded bg-sky-500/20 text-sky-300 border border-sky-400/35">NASA</span>
+                  </div>
+                  <p id="dossierRoleFull" class="text-xs sm:text-sm text-slate-300 mt-0.5"></p>
+                </div>
+              </div>
+
+              <!-- Gamified Countermeasure Readiness Streak -->
+              <div class="px-3.5 py-2 rounded-xl bg-emerald-950/35 border border-emerald-500/35 text-left sm:text-right shrink-0">
+                <span class="text-[10px] font-mono uppercase text-emerald-400 block" data-i18n="readinessStreakLabel">COUNTERMEASURE STREAK</span>
+                <span id="dossierStreakVal" class="font-mono font-bold text-base text-white">28 DAYS &bull; 96%</span>
+              </div>
+            </div>
+
+            <!-- Physiological Specs Grid -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mb-4">
+              <div class="p-3 rounded-xl bg-slate-950/75 border border-slate-800">
+                <span class="text-[10px] font-mono text-slate-400 uppercase block" data-i18n="specBlood">Blood / Age</span>
+                <span id="specBloodVal" class="font-mono font-bold text-sm text-white mt-0.5 block">O+ / 41y</span>
+              </div>
+              <div class="p-3 rounded-xl bg-slate-950/75 border border-slate-800">
+                <span class="text-[10px] font-mono text-slate-400 uppercase block" data-i18n="specRad">Cumulative Rad</span>
+                <span id="specRadVal" class="font-mono font-bold text-sm text-emerald-400 mt-0.5 block">148.4 mSv</span>
+              </div>
+              <div class="p-3 rounded-xl bg-slate-950/75 border border-slate-800">
+                <span class="text-[10px] font-mono text-slate-400 uppercase block" data-i18n="specSleep">24h Sleep / Mood</span>
+                <span id="specSleepVal" class="font-mono font-bold text-sm text-sky-300 mt-0.5 block">7.4h / Optimal</span>
+              </div>
+              <div class="p-3 rounded-xl bg-slate-950/75 border border-slate-800">
+                <span class="text-[10px] font-mono text-slate-400 uppercase block" data-i18n="specVo2">VO2 Max / Bone</span>
+                <span id="specVo2Val" class="font-mono font-bold text-sm text-white mt-0.5 block">54.2 / -0.4%</span>
+              </div>
+            </div>
+
+            <!-- 7-Day Mission Biometric Trend Chart (SVG Bar & Line Visualization) -->
+            <div class="p-4 rounded-xl bg-slate-950/75 border border-slate-800 mb-4">
+              <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+                <div>
+                  <h4 class="font-display font-bold text-xs sm:text-sm text-white" data-i18n="trendChartTitle">7-Day Mission Physiological &amp; Sleep Trend</h4>
+                  <span class="text-[10px] font-mono text-slate-400" data-i18n="trendChartSub">SOL 136 &rarr; SOL 142 (Offline Edge Vault)</span>
+                </div>
+                <div class="flex items-center gap-3 text-[10px] font-mono">
+                  <span class="flex items-center gap-1 text-sky-400"><span class="w-2 h-2 rounded-full bg-sky-400"></span> <span data-i18n="legendSleep">Sleep (hrs)</span></span>
+                  <span class="flex items-center gap-1 text-emerald-400"><span class="w-2 h-2 rounded-full bg-emerald-400"></span> <span data-i18n="legendHrv">HRV (ms)</span></span>
+                </div>
+              </div>
+              <div id="sevenDayChartContainer" class="grid grid-cols-7 gap-2 items-end h-28 pt-3 px-1">
+                <!-- Populated by JS -->
+              </div>
+            </div>
+
+            <!-- Medical History & GravityCare Individual Note -->
+            <div class="p-3.5 rounded-xl bg-sky-950/25 border border-sky-500/30">
+              <span class="text-[10px] font-mono uppercase text-sky-400 font-bold block mb-1" data-i18n="medNotesHeader">
+                MED-GEMMA INDIVIDUAL CLINICAL PROFILE NOTE
+              </span>
+              <p id="dossierClinicalNote" class="text-xs text-slate-200 leading-relaxed"></p>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between pt-2 border-t border-slate-800/80">
+            <span class="text-[11px] font-mono text-slate-400" data-i18n="syncStatusNote">FHIR R4 Space Profile &bull; Ready for DSN Downlink</span>
+            <button onclick="switchView('cockpit')" data-astro-only class="px-4 py-2 rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 font-display font-bold text-xs transition-colors" data-i18n="openInCockpitBtn">
+              Monitor Live in Cockpit &rarr;
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- =====================================================================
+         VIEW 3: EMERGENCY PROTOCOL MODE (CREW MEDICAL OFFICER / CMO)
+    ====================================================================== -->
+    <section id="view-emergency" class="hidden max-w-4xl mx-auto">
+      <div class="glass-card rounded-2xl p-5 sm:p-7 border-2 border-red-500/60">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-4 mb-5">
+          <div>
+            <div class="flex items-center gap-2 mb-1">
+              <span class="px-2.5 py-0.5 rounded bg-red-500 text-slate-950 font-mono font-bold text-xs uppercase" data-i18n="cmoBadge">
+                CMO AUTONOMOUS GUIDANCE
+              </span>
+              <span class="font-mono text-xs text-slate-400" data-i18n="cmoLowCog">LOW COGNITIVE LOAD UI</span>
+            </div>
+            <h2 id="cmoProtocolTitle" class="font-display font-bold text-xl sm:text-2xl text-white"></h2>
+          </div>
+          <div class="text-left sm:text-right font-mono bg-slate-950/80 px-4 py-2 rounded-xl border border-slate-800">
+            <span class="text-[10px] text-slate-400 block" data-i18n="protocolTimerLabel">ELAPSED PROTOCOL TIME</span>
+            <span id="protocolTimer" class="text-2xl font-bold text-amber-400 tabular-nums">00:00</span>
+          </div>
+        </div>
+
+        <!-- Required Onboard Medical Kit Items -->
+        <div class="p-3.5 rounded-xl bg-slate-950/80 border border-amber-500/35 mb-5 flex flex-wrap items-center justify-between gap-3">
+          <span class="text-xs font-mono uppercase text-amber-300 font-semibold" data-i18n="cmoKitLabel">Required Orion/Gateway Med Kit:</span>
+          <div id="cmoKitBadges" class="flex flex-wrap gap-2 text-xs font-mono"></div>
+        </div>
+
+        <!-- Step-by-Step Interactive Cards -->
+        <div id="cmoStepsContainer" class="space-y-3"></div>
+
+        <div class="mt-6 pt-4 border-t border-slate-800 flex items-center justify-between">
+          <button onclick="resetCmoSteps()" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-display font-semibold text-slate-300" data-i18n="resetChecklistBtn">
+            Reset Checklist
+          </button>
+          <button onclick="switchView('cockpit')" data-astro-only class="px-4 py-2 rounded-xl bg-sky-500/20 hover:bg-sky-500/30 border border-sky-400/40 text-xs font-display font-semibold text-sky-300" data-i18n="backToCockpitBtn">
+            &larr; Return to Cockpit Telemetry
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- =====================================================================
+         VIEW 4: EARTH DUAL-USE MODE (CSA TERRESTRIAL SPIN-OFF)
+    ====================================================================== -->
+    <section id="view-dualuse" class="hidden max-w-5xl mx-auto">
+      <div class="glass-card rounded-2xl p-5 sm:p-7">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800 pb-4 mb-5">
+          <div>
+            <span class="text-xs font-mono uppercase tracking-widest text-emerald-400" data-i18n="dualEyebrow">
+              CANADIAN SPACE AGENCY (CSA) // TERRESTRIAL SPIN-OFF
+            </span>
+            <h2 class="font-display font-bold text-xl sm:text-2xl text-white mt-0.5" data-i18n="dualTitle">
+              Earth Dual-Use Mode: Autonomous Offline Telemedicine
+            </h2>
+            <p class="text-xs sm:text-sm text-slate-300 mt-1" data-i18n="dualSubtitle">
+              The exact same zero-connectivity GravityCare engine built for deep space powers medical triage in remote terrestrial environments without internet infrastructure.
+            </p>
+          </div>
+          <!-- Environment Selector -->
+          <div class="flex flex-wrap gap-2 shrink-0">
+            <button onclick="selectEarthProfile('polar')" id="earth-btn-polar" class="earth-btn px-3 py-2 rounded-xl text-xs font-display font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-400/40" data-i18n="earthTabPolar">
+              Arctic Research Base
+            </button>
+            <button onclick="selectEarthProfile('rural')" id="earth-btn-rural" class="earth-btn px-3 py-2 rounded-xl text-xs font-display font-semibold bg-slate-900 text-slate-400 border border-slate-700 hover:text-white" data-i18n="earthTabRural">
+              Remote Rural Clinic
+            </button>
+            <button onclick="selectEarthProfile('disaster')" id="earth-btn-disaster" class="earth-btn px-3 py-2 rounded-xl text-xs font-display font-semibold bg-slate-900 text-slate-400 border border-slate-700 hover:text-white" data-i18n="earthTabDisaster">
+              Disaster Relief Zone
+            </button>
+          </div>
+        </div>
+
+        <!-- Space vs Earth Architecture Comparison Strip -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-5">
+          <div class="p-3.5 rounded-xl bg-sky-950/25 border border-sky-500/30">
+            <span class="text-[10px] font-mono uppercase text-sky-400 font-bold" data-i18n="compSpaceTag">DEEP SPACE ARCHITECTURE (ARTEMIS / GATEWAY)</span>
+            <p class="text-xs text-slate-300 mt-1" data-i18n="compSpaceDesc">
+              14&ndash;20 min Earth communication delay &bull; Radiation &amp; ECLSS sensor fusion &bull; Local GravityCare triage &bull; Store-and-forward DSN packets.
+            </p>
+          </div>
+          <div class="p-3.5 rounded-xl bg-emerald-950/25 border border-emerald-500/30">
+            <span class="text-[10px] font-mono uppercase text-emerald-400 font-bold" data-i18n="compEarthTag">TERRESTRIAL SPIN-OFF (OFF-GRID EARTH)</span>
+            <p class="text-xs text-slate-300 mt-1" data-i18n="compEarthDesc">
+              Zero cellular/fiber coverage &bull; Wearable patch + environmental fusion &bull; Identical GravityCare edge model &bull; Low-bandwidth satellite burst sync.
+            </p>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-5">
+          <div class="p-4 rounded-xl bg-slate-950/75 border border-slate-800">
+            <span class="text-[10px] font-mono text-slate-400 uppercase" data-i18n="earthCard1Label">ACTIVE TERRESTRIAL NODE</span>
+            <h3 id="earthNodeTitle" class="font-display font-bold text-base text-white mt-1"></h3>
+            <p id="earthNodeCoords" class="font-mono text-xs text-emerald-400 mt-1"></p>
+            <p id="earthNodeDesc" class="text-xs text-slate-300 mt-2 leading-relaxed"></p>
+          </div>
+
+          <div class="p-4 rounded-xl bg-slate-950/75 border border-slate-800">
+            <span class="text-[10px] font-mono text-slate-400 uppercase" data-i18n="earthCard2Label">MAPPED ENVIRONMENTAL SENSORS</span>
+            <ul id="earthSensorsList" class="mt-2 space-y-2 text-xs font-mono text-slate-200"></ul>
+          </div>
+
+          <div class="p-4 rounded-xl bg-slate-950/75 border border-sky-500/35">
+            <span class="text-[10px] font-mono text-sky-400 uppercase" data-i18n="earthCard3Label">MED-GEMMA FIELD TRIAGE OUTPUT</span>
+            <p id="earthAiSummary" class="text-xs text-slate-200 mt-2 leading-relaxed"></p>
+          </div>
+        </div>
+
+        <div class="p-4 rounded-xl bg-emerald-950/25 border border-emerald-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div class="text-xs text-slate-200" data-i18n="dualFooterNote">
+            <strong class="text-emerald-300">Space-to-Earth Impact (CSA Objective):</strong> Zero cloud dependency reduces diagnostic latency from hours (medevac radio relay) to <span class="font-mono text-emerald-300">&lt;50 milliseconds</span> on ruggedized field tablets.
+          </div>
+          <button onclick="switchView('cockpit')" class="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-display font-bold text-xs shrink-0" data-i18n="backToSpaceBtn">
+            Back to Space Mission
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <section id="view-ward" class="hidden space-y-4">
+      <div class="glass-card rounded-2xl p-4 sm:p-5">
+        <p class="text-[10px] font-mono uppercase tracking-widest text-sky-300" data-i18n="wardEyebrow">Assigned crew · fictional</p>
+        <h2 class="font-display font-bold text-xl text-white mt-1" data-i18n="wardTitle">Clinical board</h2>
+        <p class="text-xs text-slate-400 mt-1" data-i18n="wardLead">Open a file to see that person’s body map.</p>
+        <div id="wardBody" class="mt-4 grid md:grid-cols-2 gap-3"></div>
+      </div>
+    </section>
+
+    <section id="view-nutrition" class="hidden space-y-4">
+      <div class="glass-card rounded-2xl p-4 sm:p-5">
+        <p class="text-[10px] font-mono uppercase tracking-widest text-emerald-300" data-i18n="nutrEyebrow">Individual nutrition · fictional logs</p>
+        <h2 class="font-display font-bold text-xl text-white mt-1" data-i18n="nutrTitle">Personal plan</h2>
+        <p class="text-xs text-slate-400 mt-1" data-i18n="nutrLead">Built from this person’s record and the food actually on board.</p>
+        <div id="nutritionBody" class="mt-4 text-sm text-slate-200">Sign in to load a plan.</div>
+        <form id="reviewForm" class="hidden mt-4 grid gap-2">
+          <label class="text-[11px] font-mono text-slate-400" for="reviewStatus" data-i18n="reviewLabel">Physician review</label>
+          <select id="reviewStatus" class="rounded-xl bg-slate-950 border border-slate-700 px-3 py-2 text-sm">
+            <option value="VALIDATED" data-i18n="optValidate">Validate</option>
+            <option value="MODIFIED" data-i18n="optModify">Modify</option>
+            <option value="REJECTED" data-i18n="optReject">Reject</option>
+          </select>
+          <textarea id="reviewNote" required minlength="3" data-i18n-placeholder="reviewPlaceholder" placeholder="Note for this fictional review" class="rounded-xl bg-slate-950 border border-slate-700 px-3 py-2 text-sm min-h-20"></textarea>
+          <button class="rounded-xl bg-emerald-500 text-slate-950 font-display font-bold py-2" type="submit" data-i18n="reviewSave">Save review</button>
+        </form>
+      </div>
+    </section>
+
+    <section id="view-alerts" class="hidden space-y-4">
+      <div class="glass-card rounded-2xl p-4 sm:p-5">
+        <p class="text-[10px] font-mono uppercase tracking-widest text-amber-300" data-i18n="alertsEyebrow">Screening rules · not flight limits</p>
+        <h2 class="font-display font-bold text-xl text-white mt-1" data-i18n="alertsTitle">Alerts</h2>
+        <div class="flex flex-wrap gap-2 mt-3">
+          <button type="button" id="demoPhysioBtn" class="rounded-xl border border-amber-400/40 text-amber-200 text-xs font-mono px-3 py-2" data-i18n="demoPhysio">Demo: heart-rate warning</button>
+          <button type="button" id="demoCriticalBtn" class="rounded-xl border border-red-400/50 text-red-200 text-xs font-mono px-3 py-2" data-i18n="demoCritical">Demo: critical oxygen</button>
+        </div>
+        <p class="text-[11px] text-slate-500 mt-2" data-i18n="alertsLead">A critical demo alert is marked sent to the physician before the written analysis finishes.</p>
+        <div id="alertsBody" class="mt-4 space-y-3"></div>
+      </div>
+    </section>
+
+    <section id="view-messages" class="hidden space-y-4">
+      <div class="glass-card rounded-2xl p-4 sm:p-5">
+        <p class="text-[10px] font-mono uppercase tracking-widest text-sky-300" data-i18n="msgEyebrow">Simulated crew–physician channel</p>
+        <h2 class="font-display font-bold text-xl text-white mt-1" data-i18n="msgTitle">Messages</h2>
+        <p class="text-xs text-slate-400 mt-1" data-i18n="msgLead">If the network drops, the message stays in this browser until you sync.</p>
+        <div id="messagesBody" class="mt-4 space-y-2 text-sm"></div>
+        <form id="messageForm" class="mt-4 grid gap-2">
+          <select id="messageReceiver" class="rounded-xl bg-slate-950 border border-slate-700 px-3 py-2 text-sm"></select>
+          <textarea id="messageContent" required data-i18n-placeholder="writeMessage" class="rounded-xl bg-slate-950 border border-slate-700 px-3 py-2 text-sm min-h-20" placeholder="Write a message"></textarea>
+          <div class="flex gap-2">
+            <button class="rounded-xl bg-sky-500 text-slate-950 font-display font-bold px-4 py-2" type="submit" data-i18n="sendBtn">Send</button>
+            <button id="syncBtn" class="rounded-xl border border-slate-600 text-slate-200 px-4 py-2 text-sm" type="button" data-i18n="syncBtn">Sync offline queue</button>
+          </div>
+          <p id="outboxCount" class="text-[11px] font-mono text-slate-500"></p>
+        </form>
+      </div>
+    </section>
+
+    <section id="view-ground" class="hidden space-y-4">
+      <div class="glass-card rounded-2xl p-4 sm:p-5">
+        <p class="text-[10px] font-mono uppercase tracking-widest text-slate-300" data-i18n="groundEyebrow">Ground operations</p>
+        <h2 class="font-display font-bold text-xl text-white mt-1" data-i18n="groundTitle">Mission picture</h2>
+        <p class="text-xs text-slate-400 mt-1" data-i18n="groundLead">Names, mission state, and alert level only.</p>
+        <div id="groundBody" class="mt-4"></div>
+      </div>
+    </section>
+
+    <section id="view-admin" class="hidden space-y-4">
+      <div class="glass-card rounded-2xl p-4 sm:p-5">
+        <p class="text-[10px] font-mono uppercase tracking-widest text-slate-300" data-i18n="adminEyebrow">Administration</p>
+        <h2 class="font-display font-bold text-xl text-white mt-1" data-i18n="adminTitle">Accounts and access log</h2>
+        <div id="adminBody" class="mt-4 text-sm"></div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- =======================================================================
+       PERSISTENT BOTTOM BAR: LIVE TELEMETRY SCENARIO SIMULATOR
+  ======================================================================== -->
+  <footer id="simFooter" class="fixed bottom-0 inset-x-0 z-50 glass-card border-x-0 border-b-0 rounded-none px-4 py-2.5">
+    <div class="max-w-[1680px] mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
+      <div class="flex items-center gap-2 text-xs font-mono">
+        <span class="px-2 py-0.5 rounded bg-sky-500/20 text-sky-300 border border-sky-400/35 font-bold" data-i18n="simBadge">
+          LIVE TELEMETRY SIMULATOR
+        </span>
+        <span class="text-slate-400 hidden xl:inline" data-i18n="simHint">Trigger multi-sensor spaceflight scenarios for jury demo:</span>
+      </div>
+
+      <div class="flex flex-wrap items-center justify-center gap-2 w-full sm:w-auto">
+        <button onclick="setScenario('nominal')" id="sim-btn-nominal" class="sim-btn px-3.5 py-1.5 rounded-xl text-xs font-mono font-bold transition-all bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/20" data-i18n="simBtn1">
+          1. NOMINAL ORBIT
+        </button>
+        <button onclick="setScenario('solar')" id="sim-btn-solar" class="sim-btn px-3.5 py-1.5 rounded-xl text-xs font-mono font-bold transition-all bg-slate-950 hover:bg-slate-900 text-red-400 border border-red-500/45" data-i18n="simBtn2">
+          2. SOLAR PARTICLE EVENT (CSA ALERT)
+        </button>
+        <button onclick="setScenario('co2')" id="sim-btn-co2" class="sim-btn px-3.5 py-1.5 rounded-xl text-xs font-mono font-bold transition-all bg-slate-950 hover:bg-slate-900 text-amber-400 border border-amber-500/45" data-i18n="simBtn3">
+          3. CABIN CO2 SPIKE &amp; EVA FATIGUE
+        </button>
+      </div>
+    </div>
+  </footer>
+
+  <!-- =======================================================================
+       JAVASCRIPT: ASTRONAUT PROFILES, BILINGUAL I18N, TELEMETRY & ECG CANVAS
+  ======================================================================== -->
+  <script>
+    // --- GLOBAL STATE ---
+    let currentLang = 'fr';
+    let currentScenario = 'nominal';
+    let currentView = 'cockpit';
+    let currentAstroId = 'vance';
+    let currentBodySystem = 'neuro';
+    let currentEarthProfile = 'polar';
+    let missionSeconds = 142 * 86400 + 8 * 3600 + 41 * 60 + 12;
+    let protocolSeconds = 0;
+
+    // --- 4 ARTEMIS / CSA ASTRONAUT PROFILES ---
+    const astronauts = {
+      vance: {
+        id: 'vance',
+        initials: 'KV',
+        shortName: 'CDR. Vance',
+        fullName: 'CDR. Kathryn Vance',
+        agency: 'NASA',
+        blood: 'O+',
+        age: '41y',
+        flightHours: '4,210 hrs',
+        streak: '28 DAYS \u2022 96%',
+        hrOffset: 0,
+        spo2Base: 98,
+        hrvBase: 64,
+        bp: '118/76',
+        glucose: 94,
+        temp: 36.8,
+        cumRad: 148.4,
+        aredPct: 85,
+        aredMins: '102 / 120 min',
+        sleepHrs: '7.4h',
+        vo2Bone: '54.2 / -0.4%',
+        iop: '15 mmHg (OK)',
+        sevenDay: [
+          { day: 'D-6', sleep: 7.2, hrv: 61 },
+          { day: 'D-5', sleep: 7.5, hrv: 65 },
+          { day: 'D-4', sleep: 6.8, hrv: 58 },
+          { day: 'D-3', sleep: 7.6, hrv: 66 },
+          { day: 'D-2', sleep: 7.3, hrv: 63 },
+          { day: 'D-1', sleep: 7.5, hrv: 65 },
+          { day: 'NOW', sleep: 7.4, hrv: 64 }
+        ],
+        en: {
+          role: 'Mission Commander \u2022 Artemis-IV',
+          mood: 'Optimal',
+          clinicalNote: 'Commander Vance shows high cardiovascular adaptation to microgravity (baseline HRV 64ms). Mild cephalic fluid shift monitored via weekly OCT; zero optic disc edema.',
+          systems: {
+            neuro: { title: 'Neuro-Ocular & SANS Monitor', badge: 'IOP 15 mmHg (OK)', metrics: 'OCT RNFL: 98 \u03BCm \u2022 Amsler: 0/10', desc: 'Intraocular pressure and optic nerve sheath diameter remain stable despite prolonged microgravity fluid redistribution.' },
+            cardio: { title: 'Cardiovascular & Autonomic', badge: 'OPTIMAL', metrics: 'Resting HR: 68 BPM \u2022 BP: 118/76 mmHg', desc: 'Strong vagal tone and orthostatic tolerance preserved through daily aerobic cycle ergometer sessions.' },
+            metabolic: { title: 'Metabolic & Hydration', badge: 'HYDRATED', metrics: 'Glucose: 94 mg/dL \u2022 Fluid: 2.1/2.5 L', desc: 'Electrolyte balance and glycemic variability remain tightly regulated within mission norms.' },
+            radiation: { title: 'Radiation & Immune Shielding', badge: '24.7% LIMIT', metrics: 'Cumulative: 148.4 / 600 mSv (CSA)', desc: 'Lymphocyte count normal; cumulative deep-space exposure well within NASA career limit.' },
+            musculo: { title: 'Musculoskeletal & Bone Density', badge: '85% ARED', metrics: 'Load: 102/120 min \u2022 Femoral BMD: -0.4%', desc: 'High compliance on Advanced Resistive Exercise Device (ARED) prevents lumbar and femoral bone loss.' }
+          }
+        },
+        fr: {
+          role: 'Commandante de Mission \u2022 Artemis-IV',
+          mood: 'Optimal',
+          clinicalNote: 'La Commandante Vance pr\u00E9sente une excellente adaptation cardiovasculaire \u00E0 la microgravit\u00E9 (VFC de base 64 ms). L\u00E9ger transfert de fluides c\u00E9phaliques suivi par OCT hebdomadaire ; aucun \u0153d\u00E8me papillaire.',
+          systems: {
+            neuro: { title: 'Moniteur Neuro-Oculaire & SANS', badge: 'PIO 15 mmHg (OK)', metrics: 'OCT RNFL : 98 \u03BCm \u2022 Amsler : 0/10', desc: 'La pression intraoculaire et le nerf optique restent stables malgr\u00E9 la redistribution des fluides en microgravit\u00E9.' },
+            cardio: { title: 'Cardiovasculaire & Autonome', badge: 'OPTIMAL', metrics: 'FC Repos : 68 BPM \u2022 TA : 118/76 mmHg', desc: 'Tonus vagal \u00E9lev\u00E9 et tol\u00E9rance orthostatique pr\u00E9serv\u00E9s gr\u00E2ce au v\u00E9lo ergom\u00E8tre quotidien.' },
+            metabolic: { title: 'M\u00E9tabolisme & Hydratation', badge: 'HYDRAT\u00C9E', metrics: 'Glyc\u00E9mie : 94 mg/dL \u2022 Eau : 2,1/2,5 L', desc: '\u00C9quilibre \u00E9lectrolytique et glyc\u00E9mique parfaitement r\u00E9gul\u00E9s selon les standards NASA.' },
+            radiation: { title: 'Radiations & Immunit\u00E9', badge: '24,7% LIMITE', metrics: 'Cumul : 148,4 / 600 mSv (ASC)', desc: 'Taux lymphocytaire normal ; exposition cumul\u00E9e bien en de\u00E7\u00E0 de la limite de carri\u00E8re.' },
+            musculo: { title: 'Musculosquelettique & Densit\u00E9 Osseuse', badge: '85% ARED', metrics: 'Charge : 102/120 min \u2022 DMO : -0,4%', desc: 'Forte assiduit\u00E9 sur l\u2019appareil r\u00E9sistif ARED pr\u00E9venant la d\u00E9min\u00E9ralisation osseuse.' }
+          }
+        }
+      },
+      chen: {
+        id: 'chen',
+        initials: 'MC',
+        shortName: 'PLT. Chen',
+        fullName: 'PLT. Marcus Chen',
+        agency: 'NASA',
+        blood: 'A-',
+        age: '36y',
+        flightHours: '2,890 hrs',
+        streak: '21 DAYS \u2022 91%',
+        hrOffset: 4,
+        spo2Base: 99,
+        hrvBase: 58,
+        bp: '122/78',
+        glucose: 98,
+        temp: 36.9,
+        cumRad: 156.2,
+        aredPct: 78,
+        aredMins: '94 / 120 min',
+        sleepHrs: '6.6h',
+        vo2Bone: '56.0 / -0.6%',
+        iop: '16 mmHg (OK)',
+        sevenDay: [
+          { day: 'D-6', sleep: 6.5, hrv: 55 },
+          { day: 'D-5', sleep: 6.8, hrv: 59 },
+          { day: 'D-4', sleep: 6.2, hrv: 52 },
+          { day: 'D-3', sleep: 7.0, hrv: 61 },
+          { day: 'D-2', sleep: 6.4, hrv: 56 },
+          { day: 'D-1', sleep: 6.7, hrv: 57 },
+          { day: 'NOW', sleep: 6.6, hrv: 58 }
+        ],
+        en: {
+          role: 'Lunar Pilot & Radiation Officer',
+          mood: 'Mass watch',
+          clinicalNote: 'Fictional pilot Chen: progressive drop in body mass, lower activity, and intake below the planning estimate. Peanut allergy is on file. Not a diagnosis.',
+          systems: {
+            neuro: { title: 'Neuro-Ocular & Circadian Vigilance', badge: 'IOP 16 mmHg (OK)', metrics: 'PVT Reaction: 218 ms \u2022 Amsler: 0/10', desc: 'Psychomotor vigilance reaction time remains sharp despite 6.6h sleep cycle.' },
+            cardio: { title: 'Cardiovascular & Autonomic', badge: 'NOMINAL', metrics: 'Resting HR: 72 BPM \u2022 BP: 122/78 mmHg', desc: 'Normal sinus rhythm with mild sympathetic tone during docking simulation drills.' },
+            metabolic: { title: 'Metabolic & Nutrition', badge: 'MASS WATCH', metrics: 'Logged mass falling \u2022 intake below estimate', desc: 'Fictional record: body mass has drifted down and logged intake is low. This is a watch, not a diagnosis.' },
+            radiation: { title: 'Radiation & Dosimetry Officer', badge: '26.0% LIMIT', metrics: 'Cumulative: 156.2 / 600 mSv (CSA)', desc: 'Slightly higher cumulative dose from cupola observation shifts; within safe limits.' },
+            musculo: { title: 'Musculoskeletal & Lower Limb', badge: 'MUSCLE WATCH', metrics: 'ARED 78% \u2022 calf volume -2.1%', desc: 'Resistive exercise is below the daily block. Nutrition does not replace that countermeasure.' }
+          }
+        },
+        fr: {
+          role: 'Pilote Lunaire & Officier Radiations',
+          mood: 'Suivi de masse',
+          clinicalNote: 'Dossier fictif du pilote Chen : baisse progressive de masse, activit\u00E9 plus faible, apports sous l\u2019estimation. Allergie \u00E0 l\u2019arachide enregistr\u00E9e. Pas un diagnostic.',
+          systems: {
+            neuro: { title: 'Vigilance Circadienne & SANS', badge: 'PIO 16 mmHg (OK)', metrics: 'R\u00E9action PVT : 218 ms \u2022 Amsler : 0/10', desc: 'Temps de r\u00E9action psychomoteur optimal malgr\u00E9 un cycle de sommeil de 6,6 h.' },
+            cardio: { title: 'Cardiovasculaire & Autonome', badge: 'NOMINAL', metrics: 'FC Repos : 72 BPM \u2022 TA : 122/78 mmHg', desc: 'Rythme sinusal normal avec l\u00E9ger tonus sympathique lors des simulations d\u2019amarrage.' },
+            metabolic: { title: 'M\u00E9tabolisme & Nutrition', badge: 'MASSE SUIVI', metrics: 'Masse en baisse \u2022 apport sous l\u2019estimation', desc: 'Dossier fictif : la masse baisse et les apports enregistr\u00E9s sont bas. Ceci est une surveillance, pas un diagnostic.' },
+            radiation: { title: 'Radiations & Dosim\u00E9trie', badge: '26,0% LIMITE', metrics: 'Cumul : 156,2 / 600 mSv (ASC)', desc: 'Dose cumul\u00E9e l\u00E9g\u00E8rement sup\u00E9rieure due aux quarts en coupole ; sous les seuils critiques.' },
+            musculo: { title: 'Musculosquelettique & Membres Inf.', badge: 'MUSCLE SUIVI', metrics: 'ARED 78 % \u2022 volume du mollet -2,1 %', desc: 'L\u2019exercice r\u00E9sistif est sous le bloc quotidien. La nutrition ne remplace pas cette contre-mesure.' }
+          }
+        }
+      },
+      diallo: {
+        id: 'diallo',
+        initials: 'AD',
+        shortName: 'Dr. Diallo',
+        fullName: 'MS-1. Dr. Amina Diallo',
+        agency: 'NASA',
+        blood: 'B+',
+        age: '38y',
+        flightHours: '1,940 hrs',
+        streak: '30 DAYS \u2022 99%',
+        hrOffset: -4,
+        spo2Base: 99,
+        hrvBase: 71,
+        bp: '112/72',
+        glucose: 89,
+        temp: 36.7,
+        cumRad: 141.9,
+        aredPct: 95,
+        aredMins: '114 / 120 min',
+        sleepHrs: '7.8h',
+        vo2Bone: '52.8 / -0.2%',
+        iop: '14 mmHg (OK)',
+        sevenDay: [
+          { day: 'D-6', sleep: 7.7, hrv: 69 },
+          { day: 'D-5', sleep: 7.9, hrv: 72 },
+          { day: 'D-4', sleep: 7.5, hrv: 68 },
+          { day: 'D-3', sleep: 8.0, hrv: 74 },
+          { day: 'D-2', sleep: 7.6, hrv: 70 },
+          { day: 'D-1', sleep: 7.8, hrv: 71 },
+          { day: 'NOW', sleep: 7.8, hrv: 71 }
+        ],
+        en: {
+          role: 'Crew Medical Officer (CMO) & Flight Surgeon',
+          mood: 'Fatigue watch',
+          clinicalNote: 'Fictional record: short sleep across several nights and a high fatigue score. Food is reviewed with the sleep log. Food is not assumed to be the cause.',
+          systems: {
+            neuro: { title: 'Neuro-Ocular & Sleep', badge: 'SLEEP WATCH', metrics: 'Latest sleep 4.8 h \u2022 fatigue 8/10', desc: 'Sleep is short on the latest fictional nights. This zone is on watch. It is not a diagnosis of a sleep disorder.' },
+            cardio: { title: 'Cardiovascular & Autonomic', badge: 'PEAK', metrics: 'Resting HR: 64 BPM \u2022 BP: 112/72 mmHg', desc: 'Superior parasympathetic recovery and endothelial function.' },
+            metabolic: { title: 'Metabolic & Hydration', badge: 'OPTIMAL', metrics: 'Glucose: 89 mg/dL \u2022 Fluid: 2.5/2.5 L', desc: '100% hydration and micronutrient protocol adherence.' },
+            radiation: { title: 'Radiation & Immune Shielding', badge: '23.6% LIMIT', metrics: 'Cumulative: 141.9 / 600 mSv (CSA)', desc: 'Lowest cumulative dose in crew; robust antioxidant biomarker profile.' },
+            musculo: { title: 'Musculoskeletal & Bone Density', badge: '95% ARED', metrics: 'Load: 114/120 min \u2022 BMD: -0.2%', desc: 'Near-zero bone mineral density drift across 142 mission days.' }
+          }
+        },
+        fr: {
+          role: 'M\u00E9decin de Bord (CMO) & Chirurgienne de Vol',
+          mood: 'Suivi fatigue',
+          clinicalNote: 'Dossier fictif : sommeil court sur plusieurs nuits et score de fatigue \u00E9lev\u00E9. L\u2019alimentation est relue avec le journal de sommeil, sans en faire la cause.',
+          systems: {
+            neuro: { title: 'Neuro-oculaire & sommeil', badge: 'SOMMEIL SUIVI', metrics: 'Dernier sommeil 4,8 h \u2022 fatigue 8/10', desc: 'Le sommeil est court sur les derni\u00E8res nuits fictives. Cette zone est en suivi. Ce n\u2019est pas un diagnostic de trouble du sommeil.' },
+            cardio: { title: 'Cardiovasculaire & Autonome', badge: 'EXCELLENT', metrics: 'FC Repos : 64 BPM \u2022 TA : 112/72 mmHg', desc: 'R\u00E9cup\u00E9ration parasympathique et fonction endoth\u00E9liale sup\u00E9rieures.' },
+            metabolic: { title: 'M\u00E9tabolisme & Hydratation', badge: 'OPTIMAL', metrics: 'Glyc\u00E9mie : 89 mg/dL \u2022 Eau : 2,5/2,5 L', desc: 'Adh\u00E9sion \u00E0 100% au protocole d\u2019hydratation et micronutriments.' },
+            radiation: { title: 'Radiations & Immunit\u00E9', badge: '23,6% LIMITE', metrics: 'Cumul : 141,9 / 600 mSv (ASC)', desc: 'Dose cumul\u00E9e la plus basse de l\u2019\u00E9quipage ; profil antioxydant robuste.' },
+            musculo: { title: 'Musculosquelettique & Densit\u00E9 Osseuse', badge: '95% ARED', metrics: 'Charge : 114/120 min \u2022 DMO : -0,2%', desc: 'Quasi aucune perte de densit\u00E9 min\u00E9rale osseuse apr\u00E8s 142 jours de mission.' }
+          }
+        }
+      },
+      tremblay: {
+        id: 'tremblay',
+        initials: 'LT',
+        shortName: 'MS-2. Tremblay',
+        fullName: 'MS-2. Luc Tremblay',
+        agency: 'CSA / ASC',
+        blood: 'O-',
+        age: '39y',
+        flightHours: '2,450 hrs',
+        streak: '19 DAYS \u2022 88%',
+        hrOffset: 7,
+        spo2Base: 97,
+        hrvBase: 51,
+        bp: '125/80',
+        glucose: 102,
+        temp: 37.0,
+        cumRad: 161.5,
+        aredPct: 72,
+        aredMins: '86 / 120 min',
+        sleepHrs: '6.4h',
+        vo2Bone: '55.1 / -1.3%',
+        iop: '17 mmHg (WATCH)',
+        sevenDay: [
+          { day: 'D-6', sleep: 7.0, hrv: 58 },
+          { day: 'D-5', sleep: 6.9, hrv: 56 },
+          { day: 'D-4', sleep: 6.5, hrv: 54 },
+          { day: 'D-3', sleep: 6.8, hrv: 55 },
+          { day: 'D-2', sleep: 6.2, hrv: 50 },
+          { day: 'D-1', sleep: 6.3, hrv: 49 },
+          { day: 'NOW', sleep: 6.4, hrv: 51 }
+        ],
+        en: {
+          role: 'CSA Payload & EVA Robotics Specialist',
+          mood: 'Post-EVA Recovery',
+          clinicalNote: 'Canadian Space Agency (CSA) specialist Luc Tremblay completed a 6.5h Canadarm3 EVA yesterday. Elevated metabolic workload & mild fluid shift (IOP 17 mmHg) under active GravityCare watch.',
+          systems: {
+            neuro: { title: 'Neuro-Ocular & SANS Watch', badge: 'IOP 17 mmHg (WATCH)', metrics: 'OCT RNFL: +6 \u03BCm \u2022 Amsler: 0/10', desc: 'Mild borderline intraocular pressure elevation; lower-body negative pressure (LBNP) session advised.' },
+            cardio: { title: 'Cardiovascular Post-EVA', badge: 'RECOVERY', metrics: 'Resting HR: 75 BPM \u2022 BP: 125/80 mmHg', desc: 'Transient post-EVA heart rate elevation resolving steadily over 24h recovery window.' },
+            metabolic: { title: 'Metabolic & EVA Hydration', badge: 'REHYDRATING', metrics: 'Glucose: 102 mg/dL \u2022 Fluid: 1.9/2.8 L', desc: 'Requires +900mL electrolyte replenishment following extravehicular suit perspiration.' },
+            radiation: { title: 'Radiation (EVA Exposure)', badge: '26.9% LIMIT', metrics: 'Cumulative: 161.5 / 600 mSv (CSA)', desc: 'Monitored via CSA personal MOSFET dosimeter during external robotics maintenance.' },
+            musculo: { title: 'Bone & ARED', badge: 'BONE WATCH', metrics: 'Recorded change: -1.3% \u2022 ARED: 86/120 min', desc: 'Fictional bone measure is in the prototype watch band. Resistive exercise stays on the schedule. Food does not treat the change.' }
+          }
+        },
+        fr: {
+          role: 'Sp\u00E9cialiste Robotique & EVA (ASC / CSA)',
+          mood: 'R\u00E9cup\u00E9ration Post-EVA',
+          clinicalNote: 'Le sp\u00E9cialiste de l\u2019Agence spatiale canadienne (ASC) Luc Tremblay a effectu\u00E9 une sortie EVA Canadarm3 de 6,5 h hier. Charge m\u00E9tabolique \u00E9lev\u00E9e et l\u00E9g\u00E8re hausse PIO (17 mmHg) sous suivi GravityCare.',
+          systems: {
+            neuro: { title: 'Surveillance Neuro-Oculaire SANS', badge: 'PIO 17 mmHg (SUIVI)', metrics: 'OCT RNFL : +6 \u03BCm \u2022 Amsler : 0/10', desc: 'L\u00E9g\u00E8re \u00E9l\u00E9vation limite de la pression intraoculaire ; s\u00E9ance de pression n\u00E9gative (LBNP) conseill\u00E9e.' },
+            cardio: { title: 'Cardiovasculaire Post-EVA', badge: 'R\u00C9CUP\u00C9RATION', metrics: 'FC Repos : 75 BPM \u2022 TA : 125/80 mmHg', desc: '\u00C9l\u00E9vation transitoire de la FC post-sortie extrav\u00E9hiculaire en cours de normalisation.' },
+            metabolic: { title: 'M\u00E9tabolisme & Hydratation EVA', badge: 'R\u00C9HYDRATATION', metrics: 'Glyc\u00E9mie : 102 mg/dL \u2022 Eau : 1,9/2,8 L', desc: 'N\u00E9cessite +900 mL d\u2019\u00E9lectrolytes apr\u00E8s sudation en scaphandre.' },
+            radiation: { title: 'Radiations (Exposition EVA)', badge: '26,9% LIMITE', metrics: 'Cumul : 161,5 / 600 mSv (ASC)', desc: 'Suivi par dosim\u00E8tre personnel MOSFET de l\u2019ASC lors de la maintenance robotique externe.' },
+            musculo: { title: 'Os & ARED', badge: 'OS SUIVI', metrics: 'Variation enregistr\u00E9e : -1,3 % \u2022 ARED : 86/120 min', desc: 'Mesure osseuse fictive dans la bande de suivi du prototype. L\u2019exercice r\u00E9sistif reste au programme. L\u2019alimentation ne traite pas cette variation.' }
+          }
+        }
+      }
+    };
+
+    // Track checklist completion states
+    const checklistDoneState = {
+      nominal: [false, true, false],
+      solar: [false, false, false],
+      co2: [false, false, false]
+    };
+
+    const cmoDoneState = {
+      nominal: [true, false, false],
+      solar: [false, false, false, false],
+      co2: [false, false, false, false]
+    };
+
+    // --- FULL BILINGUAL TRANSLATION DICTIONARY (EN / FR) ---
+    const i18n = {
+      en: {
+        edgeAiBadge: 'RULE ENGINE: ACTIVE',
+        copilotTitle: 'GravityCare Clinical Copilot',
+        copilotSub: 'Server rule engine · not a diagnosis',
+        aiConf: 'RULES',
+        latencyLabel: 'OWLT:',
+        navCockpit: '1. Cockpit',
+        navCrew: '2. Astronaut Profiles (4)',
+        navEmergency: '3. CMO Emergency',
+        navDualUse: '4. Earth Dual-Use (CSA)',
+        openCmoBtn: 'Open CMO Protocol \u2192',
+        viewDossierBtn: 'Dossier \u2192',
+        hrpEyebrow: 'NASA HRP FRAMEWORK',
+        hrpTitle: '5 Spaceflight Hazards (RIDGE-5)',
+        h1Name: '1. Space Radiation',
+        h1Sub: 'Individual Dose vs 600 mSv Career Limit',
+        h2Name: '2. Altered Gravity (Microgravity)',
+        h2Sub: 'Resistive Load & Cephalic Fluid Shift',
+        h3Name: '3. Closed Environment (ECLSS)',
+        h4Name: '4. Isolation & Cognitive Load',
+        h4Sub: 'NASA-TLX Workload & Sleep Efficiency',
+        circadianAligned: 'ALIGNED',
+        h5Name: '5. Distance from Earth',
+        h5Sub: 'Store-and-Forward Buffer: Ready',
+        h5Queue: '2 PKTS QUEUED',
+        offlineStorage: 'LOCAL FHIR VAULT: ENCRYPTED',
+        bioEyebrow: 'BIOSENSOR SUITE // LEAD II',
+        bioTitle: 'Live Astronaut Biometrics',
+        vitalHrLabel: 'Heart Rate',
+        vitalSpo2Label: 'SpO2',
+        vitalHrvLabel: 'HRV',
+        vitalBpLabel: 'Blood Press.',
+        vitalGlucoseLabel: 'Glucose',
+        metabolicOk: 'Metabolic OK',
+        vitalTempLabel: 'Core Temp',
+        sansEyebrow: 'MICROGRAVITY OPHTHALMOLOGY',
+        sansTitle: 'SANS Ocular & Cephalic Fluid Monitor',
+        sansDefaultDesc: 'Intraocular pressure & OCT retinal nerve fiber layer stable. Next Amsler grid self-check scheduled in 18h.',
+        sansScanning: 'SCANNING...',
+        sansVerifiedBadge: 'IOP: VERIFIED (OK)',
+        sansVerifiedDesc: '10s micro-saccade & Amsler grid check completed. Zero metamorphopsia detected; optic disc edema risk low.',
+        amslerLabel: 'Amsler Score:',
+        amslerClear: '0/10 (CLEAR)',
+        ocularBtn: 'Run 10s Ocular Check',
+        copilotTitle: 'Decision-support copilot',
+        copilotSub: 'Server rule engine \u2022 not a diagnosis',
+        synthesisHeader: '\u2022 Personalized Multi-Sensor Correlation',
+        countermeasuresHeader: 'Recommended Countermeasures',
+        symptomLabel: 'Crew Symptom Log / Edge NLP Triage Query',
+        symptomPlaceholder: 'e.g., Mild frontal headache & slight visual glare...',
+        analyzeBtn: 'Analyze',
+        presetChip1: '+ "Headache & EVA fatigue"',
+        presetChip2: '+ "Blurred near vision (SANS)"',
+        preset1Text: 'Mild frontal headache & fatigue after EVA',
+        preset2Text: 'Slight blurred near vision upon waking',
+        anatEyebrow: 'PHYSIOLOGICAL SYSTEM TELEMETRY',
+        anatTitle: 'Interactive Body System Health Map',
+        anatHint: 'Click a zone',
+        readinessStreakLabel: 'COUNTERMEASURE STREAK',
+        specBlood: 'Blood / Age',
+        specRad: 'Cumulative Rad',
+        specSleep: '24h Sleep / Mood',
+        specVo2: 'VO2 Max / Bone',
+        trendChartTitle: '7-Day Mission Physiological & Sleep Trend',
+        trendChartSub: 'SOL 136 \u2192 SOL 142 (Offline Edge Vault)',
+        legendSleep: 'Sleep (hrs)',
+        legendHrv: 'HRV (ms)',
+        medNotesHeader: 'MED-GEMMA INDIVIDUAL CLINICAL PROFILE NOTE',
+        syncStatusNote: 'FHIR R4 Space Profile \u2022 Ready for DSN Downlink',
+        openInCockpitBtn: 'Monitor Live in Cockpit \u2192',
+        sysBtnNeuro: 'Neuro/SANS',
+        sysBtnCardio: 'Cardio',
+        sysBtnMetabolic: 'Metabolic',
+        sysBtnRadiation: 'Radiation',
+        sysBtnMusculo: 'Musculo/ARED',
+        cmoBadge: 'CMO AUTONOMOUS GUIDANCE',
+        cmoLowCog: 'LOW COGNITIVE LOAD UI',
+        protocolTimerLabel: 'ELAPSED PROTOCOL TIME',
+        cmoKitLabel: 'Required Orion/Gateway Med Kit:',
+        resetChecklistBtn: 'Reset Checklist',
+        backToCockpitBtn: '\u2190 Return to Cockpit Telemetry',
+        stepMarkBtn: 'MARK COMPLETE',
+        stepDoneBtn: '\u2713 COMPLETED',
+        dualEyebrow: 'CANADIAN SPACE AGENCY (CSA) // TERRESTRIAL SPIN-OFF',
+        dualTitle: 'Earth Dual-Use Mode: Autonomous Offline Telemedicine',
+        dualSubtitle: 'The exact same zero-connectivity GravityCare engine built for deep space powers medical triage in remote terrestrial environments without internet infrastructure.',
+        earthTabPolar: 'Arctic Research Base',
+        earthTabRural: 'Remote Rural Clinic',
+        earthTabDisaster: 'Disaster Relief Zone',
+        compSpaceTag: 'DEEP SPACE ARCHITECTURE (ARTEMIS / GATEWAY)',
+        compSpaceDesc: '14\u201320 min Earth communication delay \u2022 Radiation & ECLSS sensor fusion \u2022 Local GravityCare triage \u2022 Store-and-forward DSN packets.',
+        compEarthTag: 'TERRESTRIAL SPIN-OFF (OFF-GRID EARTH)',
+        compEarthDesc: 'Zero cellular/fiber coverage \u2022 Wearable patch + environmental fusion \u2022 Identical GravityCare edge model \u2022 Low-bandwidth satellite burst sync.',
+        earthCard1Label: 'ACTIVE TERRESTRIAL NODE',
+        earthCard2Label: 'MAPPED ENVIRONMENTAL SENSORS',
+        earthCard3Label: 'MED-GEMMA FIELD TRIAGE OUTPUT',
+        dualFooterNote: '<strong class="text-emerald-300">Space-to-Earth Impact (CSA Objective):</strong> Zero cloud dependency reduces diagnostic latency from hours (medevac radio relay) to <span class="font-mono text-emerald-300">&lt;50 milliseconds</span> on ruggedized field tablets.',
+        backToSpaceBtn: 'Back to Space Mission',
+        simBadge: 'LIVE TELEMETRY SIMULATOR',
+        simHint: 'Trigger multi-sensor spaceflight scenarios for jury demo:',
+        simBtn1: '1. NOMINAL ORBIT',
+        simBtn2: '2. SOLAR PARTICLE EVENT (CSA ALERT)',
+        simBtn3: '3. CABIN CO2 SPIKE & EVA FATIGUE',
+        nlpHeader: '\u2713 Keyword sort (demo, not a model):',
+        nlpSansAction: 'Flagged for SANS neuro-ocular evaluation. Queued Amsler Grid & IOP check.',
+        nlpEvaAction: 'Cross-checked cabin CO2 & hydration log. Added 500mL electrolytes + rest window.',
+        nlpDefaultAction: 'Symptom codified into the fictional record and queued for the flight surgeon. This link is a simulation.',
+        navMyDash: 'My dashboard',
+        navMyFile: 'My file',
+        navWard: 'Crew board',
+        navClinical: 'Clinical file',
+        navNutrition: 'Nutrition',
+        navAlerts: 'Alerts',
+        navMessages: 'Messages',
+        navGround: 'Mission',
+        navAdmin: 'Administration',
+        roleAstronaut: 'Astronaut',
+        roleDoctor: 'Flight surgeon',
+        roleGround: 'Ground crew',
+        roleAdmin: 'Administrator',
+        loginKicker: 'Fictional demonstration · NASA Space Apps',
+        loginLead: 'Sign in to continue. Screens depend on your role. This prototype is not a medical device.',
+        loginEmail: 'Email',
+        loginPassword: 'Password',
+        signIn: 'Sign in',
+        demoAstro: 'Astronaut demo',
+        demoDoc: 'Physician demo',
+        demoGround: 'Ground demo',
+        demoAdmin: 'Admin demo',
+        demoPasswordNote: 'Password for every demo account: demo1234',
+        riskWord: 'RISK',
+        nutrEyebrow: 'Individual nutrition · fictional logs',
+        nutrTitle: 'Personal plan',
+        nutrLead: 'Built from this person’s record and the food actually on board. Missing inputs stay missing. A physician validates the plan.',
+        alertsEyebrow: 'Screening rules · not flight limits',
+        alertsTitle: 'Alerts',
+        alertsLead: 'A critical demo alert is marked sent to the physician before the written analysis finishes. Earth contact here is a simulation.',
+        demoPhysio: 'Demo: heart-rate warning',
+        demoCritical: 'Demo: critical oxygen',
+        msgEyebrow: 'Simulated crew–physician channel',
+        msgTitle: 'Messages',
+        msgLead: 'If the network drops, the message stays in this browser until you sync.',
+        sendBtn: 'Send',
+        syncBtn: 'Sync offline queue',
+        groundEyebrow: 'Ground operations',
+        groundTitle: 'Mission picture',
+        groundLead: 'Names, mission state, and alert level only. Histories and nutrition stay with the physician and the crewmember.',
+        adminEyebrow: 'Administration',
+        adminTitle: 'Accounts and access log',
+        wardEyebrow: 'Assigned crew · fictional',
+        wardTitle: 'Clinical board',
+        wardLead: 'Open a file to see that person’s body map, trends, and notes. You do not fly the astronaut cockpit from this seat.',
+        reviewLabel: 'Physician review',
+        reviewSave: 'Save review',
+        reviewPlaceholder: 'Note for this fictional review',
+        optValidate: 'Validate',
+        optModify: 'Modify',
+        optReject: 'Reject',
+        legendNominal: 'Stable',
+        legendWatch: 'Watch',
+        legendAlert: 'Alert',
+        mapOf: 'Map of',
+        outboxEmpty: 'Offline queue empty',
+        outboxWait: 'message(s) waiting offline',
+        simulatedLink: 'simulated link',
+        runAnalysis: 'Write the analysis',
+        noAlerts: 'No alerts in your scope.',
+        noRecord: 'No crew record in scope.',
+        noFood: 'No compatible item',
+        noMessages: 'No messages yet.',
+        writeMessage: 'Write a message',
+        openAlerts: 'Open alerts',
+        accounts: 'Accounts',
+        missionsLabel: 'Missions',
+        securityLog: 'Security log',
+        disable: 'Disable',
+        enable: 'Enable',
+        energyLabel: 'Estimated energy',
+        macroLabel: 'Protein / carbohydrate / fat',
+        fluidLabel: 'Fluid target',
+        fictionalTag: 'Fictional record',
+        qualityWord: 'quality',
+        reviewWord: 'review'
+      },
+      fr: {
+        edgeAiBadge: 'MOTEUR DE RÈGLES : ACTIF',
+        latencyLabel: 'LATENCE :',
+        navCockpit: '1. Cockpit',
+        navCrew: '2. Profils Astronautes (4)',
+        navEmergency: '3. Urgence CMO',
+        navDualUse: '4. Dual-Use Terre (ASC)',
+        openCmoBtn: 'Ouvrir Protocole CMO \u2192',
+        viewDossierBtn: 'Dossier \u2192',
+        hrpEyebrow: 'CADRE SCIENTIFIQUE NASA HRP',
+        hrpTitle: 'Les 5 Dangers Spatiaux (RIDGE-5)',
+        h1Name: '1. Radiations Spatiales',
+        h1Sub: 'Dose individuelle vs Limite 600 mSv',
+        h2Name: '2. Gravit\u00E9 Modifi\u00E9e (Microgravit\u00E9)',
+        h2Sub: 'Charge musculaire ARED & Fluides c\u00E9phaliques',
+        h3Name: '3. Environnement Ferm\u00E9 (ECLSS)',
+        h4Name: '4. Isolement & Charge Cognitive',
+        h4Sub: 'Score NASA-TLX & Efficacit\u00E9 sommeil',
+        circadianAligned: 'ALIGN\u00C9',
+        h5Name: '5. Distance de la Terre',
+        h5Sub: 'Tampon t\u00E9l\u00E9m\u00E9trique diff\u00E9r\u00E9 : Pr\u00EAt',
+        h5Queue: '2 PAQUETS EN ATTENTE',
+        offlineStorage: 'COFFRE FHIR LOCAL : CHIFFR\u00C9',
+        bioEyebrow: 'SUITE BIOCAPTEURS // D\u00C9RIVATION II',
+        bioTitle: 'Biom\u00E9trie Astronaute en Direct',
+        vitalHrLabel: 'Fr\u00E9q. Card.',
+        vitalSpo2Label: 'SpO2',
+        vitalHrvLabel: 'VFC / HRV',
+        vitalBpLabel: 'Tension Art.',
+        vitalGlucoseLabel: 'Glyc\u00E9mie',
+        metabolicOk: 'M\u00E9tabolisme OK',
+        vitalTempLabel: 'Temp. Corp.',
+        sansEyebrow: 'OPHTALMOLOGIE EN MICROGRAVIT\u00C9',
+        sansTitle: 'Moniteur Oculaire SANS & Fluides',
+        sansDefaultDesc: 'Pression intraoculaire et couche nerveuse r\u00E9tinienne OCT stables. Prochain test grille d\u2019Amsler dans 18h.',
+        sansScanning: 'ANALYSE...',
+        sansVerifiedBadge: 'PIO : V\u00C9RIFI\u00C9E (OK)',
+        sansVerifiedDesc: 'Test oculaire rapide (10s) et grille d\u2019Amsler termin\u00E9s. Aucune m\u00E9tamorphopsie ; risque d\u2019\u0153d\u00E8me papillaire faible.',
+        amslerLabel: 'Score Amsler :',
+        amslerClear: '0/10 (RAS)',
+        ocularBtn: 'Test Oculaire (10s)',
+        copilotTitle: 'Copilote d\u2019aide \u00E0 la d\u00E9cision',
+        copilotSub: 'Moteur de r\u00E8gles serveur \u2022 pas un diagnostic',
+        synthesisHeader: '\u2022 Corr\u00E9lation Personnalis\u00E9e Multi-Capteurs',
+        countermeasuresHeader: 'Contre-Mesures Recommand\u00E9es',
+        symptomLabel: 'Journal Vocal / Requ\u00EAte Triage NLP Hors-Ligne',
+        symptomPlaceholder: 'ex. L\u00E9g\u00E8re c\u00E9phal\u00E9e frontale & vision floue...',
+        analyzeBtn: 'Analyser',
+        presetChip1: '+ "C\u00E9phal\u00E9e & fatigue EVA"',
+        presetChip2: '+ "Vision de pr\u00E8s floue (SANS)"',
+        preset1Text: 'L\u00E9g\u00E8re c\u00E9phal\u00E9e frontale et fatigue apr\u00E8s sortie EVA',
+        preset2Text: 'Vision de pr\u00E8s l\u00E9g\u00E8rement floue au r\u00E9veil',
+        anatEyebrow: 'T\u00C9L\u00C9M\u00C9TRIE PAR SYST\u00C8ME PHYSIOLOGIQUE',
+        anatTitle: 'Carte Anatomique Interactive de Sant\u00E9',
+        anatHint: 'Cliquez sur une zone',
+        readinessStreakLabel: 'S\u00C9RIE CONTRE-MESURES',
+        specBlood: 'Groupe / \u00C2ge',
+        specRad: 'Radiation Cumul\u00E9e',
+        specSleep: 'Sommeil 24h / Moral',
+        specVo2: 'VO2 Max / Os',
+        trendChartTitle: 'Tendance Physiologique & Sommeil (7 Jours)',
+        trendChartSub: 'SOL 136 \u2192 SOL 142 (Coffre Edge Hors-Ligne)',
+        legendSleep: 'Sommeil (h)',
+        legendHrv: 'VFC (ms)',
+        medNotesHeader: 'NOTE CLINIQUE INDIVIDUELLE MED-GEMMA',
+        syncStatusNote: 'Profil Spatial FHIR R4 \u2022 Pr\u00EAt pour liaison DSN',
+        openInCockpitBtn: 'Suivre en Direct (Cockpit) \u2192',
+        sysBtnNeuro: 'Neuro/SANS',
+        sysBtnCardio: 'Cardio',
+        sysBtnMetabolic: 'M\u00E9tabolique',
+        sysBtnRadiation: 'Radiations',
+        sysBtnMusculo: 'Musculo/ARED',
+        cmoBadge: 'GUIDAGE AUTONOME CMO',
+        cmoLowCog: 'INTERFACE FAIBLE CHARGE COGNITIVE',
+        protocolTimerLabel: 'TEMPS \u00C9COUL\u00C9 PROTOCOLE',
+        cmoKitLabel: 'Mat\u00E9riel M\u00E9dical Orion/Gateway Requis :',
+        resetChecklistBtn: 'R\u00E9initialiser',
+        backToCockpitBtn: '\u2190 Retour T\u00E9l\u00E9m\u00E9trie Cockpit',
+        stepMarkBtn: 'VALIDER \u00C9TAPE',
+        stepDoneBtn: '\u2713 VALID\u00C9',
+        dualEyebrow: 'AGENCE SPATIALE CANADIENNE (ASC) // RETOMB\u00C9ES TERRESTRES',
+        dualTitle: 'Mode Dual-Use Terre : T\u00E9l\u00E9m\u00E9decine Autonome Hors-Ligne',
+        dualSubtitle: 'Le m\u00EAme moteur IA local GravityCare con\u00E7u pour l\u2019espace lointain assure le triage m\u00E9dical dans les zones terrestres isol\u00E9es sans acc\u00E8s internet.',
+        earthTabPolar: 'Base Polaire Arctique',
+        earthTabRural: 'Clinique Rurale Isol\u00E9e',
+        earthTabDisaster: 'Zone Catastrophe',
+        compSpaceTag: 'ARCHITECTURE ESPACE LOINTAIN (ARTEMIS / GATEWAY)',
+        compSpaceDesc: 'D\u00E9lai Terre 14\u201320 min \u2022 Fusion capteurs radiations & ECLSS \u2022 Triage local GravityCare \u2022 Paquets diff\u00E9r\u00E9s DSN.',
+        compEarthTag: 'RETOMB\u00C9E TERRESTRE (ZONES BLANCHES)',
+        compEarthDesc: 'Z\u00E9ro r\u00E9seau cellulaire/fibre \u2022 Fusion patch vital + environnement \u2022 M\u00EAme mod\u00E8le edge GravityCare \u2022 Sync satellite bas d\u00E9bit.',
+        earthCard1Label: 'N\u0152UD TERRESTRE ACTIF',
+        earthCard2Label: 'CAPTEURS ENVIRONNEMENTAUX MAPP\u00C9S',
+        earthCard3Label: 'DIAGNOSTIC TERRAIN MED-GEMMA',
+        dualFooterNote: '<strong class="text-emerald-300">Impact Espace-Terre (Objectif ASC) :</strong> L\u2019absence de d\u00E9pendance au cloud r\u00E9duit la latence diagnostique de plusieurs heures \u00E0 <span class="font-mono text-emerald-300">&lt;50 millisecondes</span> sur tablette durcie.',
+        backToSpaceBtn: 'Retour Mission Spatiale',
+        simBadge: 'SIMULATEUR T\u00C9L\u00C9M\u00C9TRIQUE LIVE',
+        simHint: 'D\u00E9clenchez un sc\u00E9nario multi-capteurs en direct pour le jury :',
+        simBtn1: '1. ORBITE NOMINALE',
+        simBtn2: '2. \u00C9RUPTION SOLAIRE (ALERTE ASC)',
+        simBtn3: '3. PIC CO2 CABINE & FATIGUE EVA',
+        nlpHeader: '\u2713 Tri par mots-cl\u00E9s (d\u00E9mo, pas un mod\u00E8le) :',
+        nlpSansAction: 'Signal\u00E9 pour \u00E9valuation neuro-oculaire SANS. Test grille d\u2019Amsler & PIO programm\u00E9.',
+        nlpEvaAction: 'Corr\u00E9l\u00E9 avec le taux de CO2 cabine & hydratation. Ajout de 500 mL d\u2019\u00E9lectrolytes + repos.',
+        nlpDefaultAction: 'Sympt\u00F4me vers\u00E9 au dossier fictif et mis en file pour le m\u00E9decin. Cette liaison est une simulation.',
+        navMyDash: 'Mon tableau de bord',
+        navMyFile: 'Mon dossier',
+        navWard: 'Tableau \u00E9quipage',
+        navClinical: 'Dossier clinique',
+        navNutrition: 'Nutrition',
+        navAlerts: 'Alertes',
+        navMessages: 'Messages',
+        navGround: 'Mission',
+        navAdmin: 'Administration',
+        roleAstronaut: 'Astronaute',
+        roleDoctor: 'M\u00E9decin de vol',
+        roleGround: 'Personnel au sol',
+        roleAdmin: 'Administrateur',
+        loginKicker: 'Démonstration fictive · NASA Space Apps',
+        loginLead: 'Connectez-vous. Les écrans dépendent du rôle. Ce prototype n’est pas un dispositif médical.',
+        loginEmail: 'Courriel',
+        loginPassword: 'Mot de passe',
+        signIn: 'Connexion',
+        demoAstro: 'Démo astronaute',
+        demoDoc: 'Démo médecin',
+        demoGround: 'Démo sol',
+        demoAdmin: 'Démo admin',
+        demoPasswordNote: 'Mot de passe de tous les comptes de démo : demo1234',
+        riskWord: 'RISQUE',
+        nutrEyebrow: 'Nutrition individuelle \u00B7 journaux fictifs',
+        nutrTitle: 'Plan personnel',
+        nutrLead: 'Construit \u00E0 partir du dossier de cette personne et des aliments r\u00E9ellement \u00E0 bord. Une donn\u00E9e absente reste absente. Le m\u00E9decin valide le plan.',
+        alertsEyebrow: 'R\u00E8gles de d\u00E9pistage \u00B7 pas des limites de vol',
+        alertsTitle: 'Alertes',
+        alertsLead: 'Une alerte critique de d\u00E9monstration est marqu\u00E9e transmise au m\u00E9decin avant la fin de l\u2019analyse \u00E9crite. Le contact Terre est une simulation.',
+        demoPhysio: 'D\u00E9mo : fr\u00E9quence cardiaque',
+        demoCritical: 'D\u00E9mo : oxyg\u00E8ne critique',
+        msgEyebrow: 'Canal simul\u00E9 astronaute\u2013m\u00E9decin',
+        msgTitle: 'Messages',
+        msgLead: 'Si le r\u00E9seau tombe, le message reste dans ce navigateur jusqu\u2019\u00E0 la synchronisation.',
+        sendBtn: 'Envoyer',
+        syncBtn: 'Synchroniser la file hors ligne',
+        groundEyebrow: 'Op\u00E9rations au sol',
+        groundTitle: 'Image de mission',
+        groundLead: 'Noms, \u00E9tat de mission et niveau d\u2019alerte seulement. Les ant\u00E9c\u00E9dents et la nutrition restent au m\u00E9decin et \u00E0 l\u2019astronaute.',
+        adminEyebrow: 'Administration',
+        adminTitle: 'Comptes et journal d\u2019acc\u00E8s',
+        wardEyebrow: '\u00C9quipage assign\u00E9 \u00B7 fictif',
+        wardTitle: 'Tableau clinique',
+        wardLead: 'Ouvrez un dossier pour voir la carte du corps, les tendances et les notes de cette personne. Ce si\u00E8ge n\u2019ouvre pas le cockpit astronaute.',
+        reviewLabel: 'Revue du m\u00E9decin',
+        reviewSave: 'Enregistrer la revue',
+        reviewPlaceholder: 'Note pour cette revue fictive',
+        optValidate: 'Valider',
+        optModify: 'Modifier',
+        optReject: 'Rejeter',
+        legendNominal: 'Stable',
+        legendWatch: 'Suivi',
+        legendAlert: 'Alerte',
+        mapOf: 'Carte de',
+        outboxEmpty: 'File hors ligne vide',
+        outboxWait: 'message(s) en attente hors ligne',
+        simulatedLink: 'liaison simul\u00E9e',
+        runAnalysis: '\u00C9crire l\u2019analyse',
+        noAlerts: 'Aucune alerte dans votre p\u00E9rim\u00E8tre.',
+        noRecord: 'Aucun dossier dans votre p\u00E9rim\u00E8tre.',
+        noFood: 'Aucun aliment compatible',
+        noMessages: 'Pas encore de message.',
+        writeMessage: '\u00C9crire un message',
+        openAlerts: 'Alertes ouvertes',
+        accounts: 'Comptes',
+        missionsLabel: 'Missions',
+        securityLog: 'Journal de s\u00E9curit\u00E9',
+        disable: 'D\u00E9sactiver',
+        enable: 'Activer',
+        energyLabel: '\u00C9nergie estim\u00E9e',
+        macroLabel: 'Prot\u00E9ines / glucides / lipides',
+        fluidLabel: 'Objectif hydrique',
+        fictionalTag: 'Dossier fictif',
+        qualityWord: 'qualit\u00E9',
+        reviewWord: 'revue'
+      }
+    };
+
+    // --- BILINGUAL SCENARIO DEFINITIONS ---
+    const scenarios = {
+      nominal: {
+        bodyClass: '',
+        cardClass: '',
+        ridgeNumber: 18,
+        gaugeOffset: 133.95,
+        gaugeColor: '#10B981',
+        ridgePillClass: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
+        radRate: '18.4 \u03BCSv/h',
+        radDelta: 0,
+        radColor: 'bg-emerald-400',
+        radTextColor: 'text-emerald-400',
+        co2Pct: '38%',
+        co2Color: 'bg-emerald-400',
+        co2TextColor: 'text-emerald-400',
+        o2: '21.1%',
+        cogPct: '92%',
+        hrBase: 68,
+        spo2Delta: 0,
+        hrvDelta: 0,
+        tempDelta: 0,
+        ecgColor: '#10B981',
+        ecgBadgeClass: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
+        aiSeverityClass: 'bg-emerald-500/20 text-emerald-300',
+        aiConf: 'RULES',
+        en: {
+          ridgePill: 'NOMINAL ENVELOPE',
+          co2: 'CO2: 0.38%',
+          envQuality: 'NOMINAL',
+          cogScore: '92% VIGILANCE',
+          ecgBadge: 'SINUS RHYTHM',
+          aiSeverity: 'ROUTINE',
+          hrTrend: '\u2022 Resting baseline',
+          spo2Trend: '\u2022 Optimal',
+          hrvTrend: '\u2022 Balanced',
+          tempTrend: '\u2022 Nominal',
+          aiSynthesis: (astro) => `All 5 NASA HRP hazard telemetry streams for ${astro.fullName} (${astro.agency}) are within nominal mission envelopes. Autonomic recovery (HRV ${astro.hrvBase}ms) and cumulative radiation (${astro.cumRad} mSv) remain well controlled.`,
+          countermeasures: [
+            'Complete remaining ARED resistive load exercise block',
+            'Maintain 2.5L daily hydration & electrolyte target',
+            'Log evening circadian sleep readiness survey'
+          ],
+          cmoTitle: 'Routine Preventive Medical Readiness Checklist',
+          cmoKit: ['Standard Biosensor Patch', 'Amsler Visual Grid Card', 'Hydration Electrolyte Pack'],
+          cmoSteps: [
+            { title: 'Verify Wearable Biosensor Calibration', detail: 'Confirm Lead-II ECG & SpO2 optical contact integrity (>98% signal quality).' },
+            { title: 'Review CSA Dosimeter Cumulative Log', detail: 'Confirm daily galactic cosmic ray (GCR) dose remains below 0.5 mSv/day threshold.' },
+            { title: 'Prepare Delayed Telemetry Sync Packet', detail: 'Compress biometric trend logs for next Deep Space Network (DSN) downlink window.' }
+          ]
+        },
+        fr: {
+          ridgePill: 'ENVELOPPE NOMINALE',
+          co2: 'CO2 : 0.38%',
+          envQuality: 'NOMINAL',
+          cogScore: '92% VIGILANCE',
+          ecgBadge: 'RYTHME SINUSAL',
+          aiSeverity: 'ROUTINE',
+          hrTrend: '\u2022 Ligne de base',
+          spo2Trend: '\u2022 Optimale',
+          hrvTrend: '\u2022 \u00C9quilibr\u00E9e',
+          tempTrend: '\u2022 Normale',
+          aiSynthesis: (astro) => `Les 5 flux t\u00E9l\u00E9m\u00E9triques NASA HRP pour ${astro.fullName} (${astro.agency}) sont dans les normes nominales. R\u00E9cup\u00E9ration autonome (VFC ${astro.hrvBase} ms) et dose radiologique (${astro.cumRad} mSv) parfaitement ma\u00EEtris\u00E9es.`,
+          countermeasures: [
+            'Terminer la s\u00E9ance quotidienne d\u2019exercice r\u00E9sistif ARED',
+            'Maintenir l\u2019objectif d\u2019hydratation de 2,5 L/jour avec \u00E9lectrolytes',
+            'Compl\u00E9ter le journal circadien de pr\u00E9paration au sommeil'
+          ],
+          cmoTitle: 'Check-list Pr\u00E9ventive de Pr\u00E9paration M\u00E9dicale',
+          cmoKit: ['Patch Biocapteur Standard', 'Grille Visuelle d\u2019Amsler', 'Poche d\u2019\u00C9lectrolytes'],
+          cmoSteps: [
+            { title: 'V\u00E9rifier le calibrage des biocapteurs', detail: 'Confirmer l\u2019int\u00E9grit\u00E9 du signal ECG D\u00E9rivation II et SpO2 (>98% qualit\u00E9).' },
+            { title: 'Contr\u00F4ler le journal cumulatif du dosim\u00E8tre ASC', detail: 'V\u00E9rifier que la dose quotidienne GCR reste sous le seuil de 0,5 mSv/jour.' },
+            { title: 'Pr\u00E9parer le paquet t\u00E9l\u00E9m\u00E9trique diff\u00E9r\u00E9', detail: 'Compresser les tendances biom\u00E9triques pour la prochaine fen\u00EAtre DSN.' }
+          ]
+        }
+      },
+      solar: {
+        bodyClass: 'mode-critical',
+        cardClass: 'state-critical',
+        ridgeNumber: 88,
+        gaugeOffset: 19.6,
+        gaugeColor: '#EF4444',
+        ridgePillClass: 'bg-red-500/20 text-red-400 border-red-500/50',
+        radRate: '1,420 \u03BCSv/h',
+        radDelta: 16.4,
+        radColor: 'bg-red-500',
+        radTextColor: 'text-red-400',
+        co2Pct: '41%',
+        co2Color: 'bg-emerald-400',
+        co2TextColor: 'text-emerald-400',
+        o2: '21.0%',
+        cogPct: '79%',
+        hrBase: 116,
+        spo2Delta: -1,
+        hrvDelta: -31,
+        tempDelta: 0.3,
+        ecgColor: '#EF4444',
+        ecgBadgeClass: 'bg-red-500/20 text-red-400 border-red-500/45',
+        aiSeverityClass: 'bg-red-500/25 text-red-300',
+        aiConf: 'RULES',
+        en: {
+          ridgePill: 'CRITICAL RADIATION',
+          co2: 'CO2: 0.41%',
+          envQuality: 'NOMINAL',
+          cogScore: '79% ACUTE STRESS',
+          ecgBadge: 'SINUS TACHYCARDIA',
+          aiSeverity: 'CRITICAL ALERT',
+          hrTrend: '\u25B2 Acute surge',
+          spo2Trend: '\u2022 Maintained',
+          hrvTrend: '\u25BC High stress',
+          tempTrend: '\u2022 Stable',
+          alertTitle: 'SOLAR PARTICLE EVENT (SPE) DETECTED \u2014 RADIATION SHELTER ADVISED',
+          alertDesc: 'CSA-RadGuard dosimeter reports sharp proton flux surge (1,420 \u03BCSv/h). GravityCare initiated autonomous radioprotection protocol.',
+          aiSynthesis: (astro) => `CRITICAL CORRELATION for ${astro.fullName}: Canadian Space Agency (CSA) dosimeter detects an X-class Solar Particle Event (1,420 \u03BCSv/h), raising individual cumulative exposure to ${(astro.cumRad + 16.4).toFixed(1)} mSv. Heart rate spiked from acute alarm stress. Immediate retreat to polyethylene storm shelter required.`,
+          countermeasures: [
+            'Relocate immediately to Orion/Gateway Polyethylene Storm Shelter',
+            'Follow the validated mission shelter procedure. This demo does not name or dose medication',
+            'Switch CSA Dosimeter to 10-second high-frequency burst logging'
+          ],
+          cmoTitle: 'EMERGENCY PROTOCOL: Solar Particle Event (SPE) Radioprotection',
+          cmoKit: ['CSA Personal Dosimeter', 'Radioprotectant Med-Pack B', '1000mL Electrolyte Pouch', 'Water-Wall Shielding Bags'],
+          cmoSteps: [
+            { title: 'Step 1/4: Retreat to High-Density Shielded Zone', detail: 'Move all crew members to the central water-wall & polyethylene radiation storm shelter immediately.' },
+            { title: 'Step 2/4: Shelter procedure', detail: 'Follow the mission radiation procedure already approved for this vehicle. This screen is a simulation and does not prescribe a drug or a dose.' },
+            { title: 'Step 3/4: Monitor Acute Prodromal Symptoms', detail: 'Log any onset of nausea, dizziness, or fatigue in GravityCare Symptom Logger for autonomous triage.' },
+            { title: 'Step 4/4: Hold Shelter Until CSA Flux < 50 \u03BCSv/h', detail: 'Maintain sheltered posture until local CSA spectrometer confirms proton flux decay.' }
+          ]
+        },
+        fr: {
+          ridgePill: 'ALERTE RADIATION CRITIQUE',
+          co2: 'CO2 : 0.41%',
+          envQuality: 'NOMINAL',
+          cogScore: '79% STRESS AIGU',
+          ecgBadge: 'TACHYCARDIE SINUSALE',
+          aiSeverity: 'ALERTE CRITIQUE',
+          hrTrend: '\u25B2 Pic aigu',
+          spo2Trend: '\u2022 Maintenue',
+          hrvTrend: '\u25BC Stress \u00E9lev\u00E9',
+          tempTrend: '\u2022 Stable',
+          alertTitle: '\u00C9RUPTION SOLAIRE (SPE) D\u00C9TECT\u00C9E \u2014 REPLI ZONE BLIND\u00C9E REQUIS',
+          alertDesc: 'Le dosim\u00E8tre ASC-RadGuard signale un flux de protons critique (1 420 \u03BCSv/h). GravityCare a activ\u00E9 le protocole autonome de radioprotection.',
+          aiSynthesis: (astro) => `CORR\u00C9LATION CRITIQUE pour ${astro.fullName} : Le dosim\u00E8tre de l\u2019Agence spatiale canadienne (ASC) d\u00E9tecte une \u00E9ruption solaire de classe X (1 420 \u03BCSv/h), portant son cumul individuel \u00E0 ${(astro.cumRad + 16.4).toFixed(1)} mSv. Repli imm\u00E9diat vers l\u2019abri anti-radiations en poly\u00E9thyl\u00E8ne.`,
+          countermeasures: [
+            'Rejoindre imm\u00E9diatement l\u2019abri blind\u00E9 en poly\u00E9thyl\u00E8ne Orion/Gateway',
+            'Suivre la proc\u00E9dure d\u2019abri d\u00E9j\u00E0 valid\u00E9e. Cette d\u00E9mo ne nomme ni ne dose de m\u00E9dicament',
+            'Basculer le dosim\u00E8tre ASC en enregistrement haute fr\u00E9quence (10s)'
+          ],
+          cmoTitle: 'PROTOCOLE D\u2019URGENCE : Radioprotection \u00C9ruption Solaire (SPE)',
+          cmoKit: ['Dosim\u00E8tre Personnel ASC', 'Trousse Radioprotectrice B', 'Poche \u00C9lectrolytes 1000 mL', 'Sacs Blindage Eau'],
+          cmoSteps: [
+            { title: '\u00C9tape 1/4 : Repli vers la zone blind\u00E9e haute densit\u00E9', detail: 'D\u00E9placer tout l\u2019\u00E9quipage dans l\u2019abri central entour\u00E9 de parois d\u2019eau et poly\u00E9thyl\u00E8ne.' },
+            { title: '\u00C9tape 2/4 : Proc\u00E9dure d\u2019abri', detail: 'Suivre la proc\u00E9dure radiation d\u00E9j\u00E0 approuv\u00E9e pour le v\u00E9hicule. Cet \u00E9cran est une simulation et ne prescrit ni m\u00E9dicament ni dose.' },
+            { title: '\u00C9tape 3/4 : Surveiller les sympt\u00F4mes prodromiques', detail: 'Consigner toute naus\u00E9e, vertige ou fatigue dans le journal GravityCare pour triage autonome.' },
+            { title: '\u00C9tape 4/4 : Maintenir l\u2019abri jusqu\u2019\u00E0 flux ASC < 50 \u03BCSv/h', detail: 'Rester abrit\u00E9 jusqu\u2019\u00E0 confirmation de la baisse du flux de protons par le spectrom\u00E8tre ASC.' }
+          ]
+        }
+      },
+      co2: {
+        bodyClass: 'mode-warning',
+        cardClass: 'state-warning',
+        ridgeNumber: 64,
+        gaugeOffset: 58.8,
+        gaugeColor: '#F59E0B',
+        ridgePillClass: 'bg-amber-500/20 text-amber-300 border-amber-500/50',
+        radRate: '19.1 \u03BCSv/h',
+        radDelta: 0.2,
+        radColor: 'bg-emerald-400',
+        radTextColor: 'text-emerald-400',
+        co2Pct: '82%',
+        co2Color: 'bg-amber-400',
+        co2TextColor: 'text-amber-400',
+        o2: '20.4%',
+        cogPct: '68%',
+        hrBase: 96,
+        spo2Delta: -4,
+        hrvDelta: -21,
+        tempDelta: 0.6,
+        ecgColor: '#F59E0B',
+        ecgBadgeClass: 'bg-amber-500/20 text-amber-300 border-amber-500/40',
+        aiSeverityClass: 'bg-amber-500/25 text-amber-300',
+        aiConf: 'RULES',
+        en: {
+          ridgePill: 'CAUTION // HYPERCAPNIA',
+          co2: 'CO2: 0.72% (HIGH)',
+          envQuality: 'HYPERCAPNIA RISK',
+          cogScore: '68% COGNITIVE DIP',
+          ecgBadge: 'ELEVATED HR / HYPOXIA',
+          aiSeverity: 'COUNTERMEASURE',
+          hrTrend: '\u25B2 Elevated',
+          spo2Trend: '\u25BC Mild dip',
+          hrvTrend: '\u25BC Fatigue',
+          tempTrend: '\u25B2 Warmth',
+          alertTitle: 'WARNING: CABIN CO2 ELEVATED (0.72%) & POST-EVA FATIGUE CORRELATED',
+          alertDesc: 'Hypercapnic stress detected alongside reduced HRV and SpO2 dip. Engage secondary CO2 scrubber and electrolyte protocol.',
+          aiSynthesis: (astro) => `MULTI-SENSOR CORRELATION for ${astro.fullName}: Post-EVA metabolic exertion combined with ECLSS CO2 rise (0.72%) is driving mild hypercapnia and lowered HRV (${Math.max(20, astro.hrvBase - 21)}ms). Boost CDRA CO2 scrubber airflow and rehydrate immediately.`,
+          countermeasures: [
+            'Engage Secondary Amine CO2 Scrubber Bed (Target < 0.40%)',
+            'Ingest 500mL Sodium-Potassium Electrolyte Solution',
+            'Perform 3-minute paced diaphragmatic breathing (6 breaths/min)'
+          ],
+          cmoTitle: 'PROTOCOL: Cabin Hypercapnia (CO2 Spike) & Post-EVA Dehydration',
+          cmoKit: ['Pulse Oximeter Backup', 'Electrolyte Rehydration Pouch', 'ECLSS Airflow Override Key'],
+          cmoSteps: [
+            { title: 'Step 1/4: Boost ECLSS CO2 Scrubber Loop', detail: 'Switch Cabin Air Revitalization System to High-Flow Scrubbing mode to reduce ppCO2 below 3.0 mmHg.' },
+            { title: 'Step 2/4: Crew Rest & Supine Fluid Redistribution', detail: 'Have post-EVA astronaut rest seated/supine for 15 minutes to stabilize heart rate and SpO2.' },
+            { title: 'Step 3/4: Oral Electrolyte Rehydration', detail: 'Administer 500mL isotonic electrolyte solution to reverse EVA sweat-loss hemoconcentration.' },
+            { title: 'Step 4/4: Re-verify SpO2 & Cognitive Reaction Time', detail: 'Confirm SpO2 returns >= 97% before resuming mission-critical tasks.' }
+          ]
+        },
+        fr: {
+          ridgePill: 'VIGILANCE // HYPERCAPNIE',
+          co2: 'CO2 : 0.72% (\u00C9LEV\u00C9)',
+          envQuality: 'RISQUE HYPERCAPNIE',
+          cogScore: '68% BAISSE VIGILANCE',
+          ecgBadge: 'FC \u00C9LEV\u00C9E / HYPOXIE',
+          aiSeverity: 'CONTRE-MESURE',
+          hrTrend: '\u25B2 \u00C9lev\u00E9e',
+          spo2Trend: '\u25BC Baisse',
+          hrvTrend: '\u25BC Fatigue',
+          tempTrend: '\u25B2 Chaleur',
+          alertTitle: 'ATTENTION : PIC DE CO2 CABINE (0.72%) CORR\u00C9L\u00C9 \u00C0 LA FATIGUE EVA',
+          alertDesc: 'Stress hypercapnique d\u00E9tect\u00E9 avec baisse de VFC et SpO2. Activer l\u2019\u00E9purateur CO2 secondaire et r\u00E9hydrater.',
+          aiSynthesis: (astro) => `CORR\u00C9LATION MULTI-CAPTEURS pour ${astro.fullName} : L\u2019effort m\u00E9tabolique combin\u00E9 \u00E0 la hausse du CO2 cabine (0,72%) entra\u00EEne une hypercapnie l\u00E9g\u00E8re et une baisse de VFC (${Math.max(20, astro.hrvBase - 21)} ms). Augmenter le d\u00E9bit de l\u2019\u00E9purateur CO2 et r\u00E9hydrater.`,
+          countermeasures: [
+            'Activer le lit secondaire de l\u2019\u00E9purateur CO2 (Cible < 0,40%)',
+            'Ing\u00E9rer 500 mL de solution d\u2019\u00E9lectrolytes Sodium-Potassium',
+            'Effectuer 3 minutes de respiration diaphragmatique guid\u00E9e (6 cycles/min)'
+          ],
+          cmoTitle: 'PROTOCOLE : Hypercapnie Cabine (Pic CO2) & D\u00E9shydratation EVA',
+          cmoKit: ['Oxym\u00E8tre de Secours', 'Poche R\u00E9hydratation \u00C9lectrolytes', 'Cl\u00E9 D\u00E9bit ECLSS'],
+          cmoSteps: [
+            { title: '\u00C9tape 1/4 : Augmenter le d\u00E9bit de l\u2019\u00E9purateur CO2 ECLSS', detail: 'Passer le syst\u00E8me de r\u00E9g\u00E9n\u00E9ration d\u2019air en mode Haut D\u00E9bit pour ramener la ppCO2 sous 3,0 mmHg.' },
+            { title: '\u00C9tape 2/4 : Repos & redistribution des fluides', detail: 'Placer l\u2019astronaute au repos pendant 15 minutes pour stabiliser la FC et la SpO2.' },
+            { title: '\u00C9tape 3/4 : R\u00E9hydratation orale aux \u00E9lectrolytes', detail: 'Administrer 500 mL de solution isotonique pour compenser la sudation en scaphandre.' },
+            { title: '\u00C9tape 4/4 : Re-v\u00E9rifier SpO2 et temps de r\u00E9action', detail: 'Confirmer le retour de la SpO2 >= 97% avant de reprendre les op\u00E9rations critiques.' }
+          ]
+        }
+      }
+    };
+
+    // --- BILINGUAL EARTH DUAL-USE PROFILES ---
+    const earthProfiles = {
+      polar: {
+        en: {
+          title: 'Eureka High Arctic Weather Station',
+          coords: "79\u00B059'N 85\u00B056'W \u2022 SAT-LINK: INTERMITTENT",
+          desc: '6 months of polar night mimics spaceflight circadian disruption, vitamin D depletion, and extreme isolation.',
+          sensors: [
+            'Ambient Temp: <span class="text-sky-400">-42.5 &deg;C</span> (Cold injury watch)',
+            'Solar / UV Index: <span class="text-amber-400">0.0 (Polar Night)</span>',
+            'Connectivity: <span class="text-emerald-400">100% Local Edge AI</span>'
+          ],
+          aiSummary: 'SIMULATION. Early circadian drift noted for two fictional team members. This screen does not prescribe light therapy or a vitamin D supplement.'
+        },
+        fr: {
+          title: 'Station M\u00E9t\u00E9o Haut-Arctique d\u2019Eureka',
+          coords: "79\u00B059'N 85\u00B056'O \u2022 LIEN SAT : INTERMITTENT",
+          desc: '6 mois de nuit polaire reproduisent la d\u00E9synchronisation circadienne, le d\u00E9ficit en vitamine D et l\u2019isolement spatial.',
+          sensors: [
+            'Temp. Ambiante : <span class="text-sky-400">-42,5 &deg;C</span> (Risque hypothermie)',
+            'Indice UV / Solaire : <span class="text-amber-400">0.0 (Nuit Polaire)</span>',
+            'Connectivit\u00E9 : <span class="text-emerald-400">100% IA Locale Edge</span>'
+          ],
+          aiSummary: 'SIMULATION. Dérive circadienne précoce notée pour deux personnes fictives. Cet écran ne prescrit ni luminothérapie ni complément de vitamine D.'
+        }
+      },
+      rural: {
+        en: {
+          title: 'Nunavik Northern Community Health Post',
+          coords: "58\u00B006'N 68\u00B024'W \u2022 BANDWIDTH: LOW / OFFLINE",
+          desc: 'Provides specialist-grade diagnostic support to local nurses when medevac flights are grounded by Arctic blizzards.',
+          sensors: [
+            'Point-of-Care Vitals: <span class="text-emerald-400">Bluetooth Patch Synced</span>',
+            'Medevac Weather Window: <span class="text-red-400">Closed (18h storm)</span>',
+            'Connectivity: <span class="text-emerald-400">100% Local Edge AI</span>'
+          ],
+          aiSummary: 'SIMULATION. A field tablet can show the same rule categories used in the space demo. It does not rule out a diagnosis and it does not choose a medicine.'
+        },
+        fr: {
+          title: 'Dispensaire Communautaire Nordique (Nunavik)',
+          coords: "58\u00B006'N 68\u00B024'O \u2022 D\u00C9BIT : FAIBLE / HORS-LIGNE",
+          desc: 'Offre un soutien diagnostique de niveau sp\u00E9cialiste aux infirmiers locaux lorsque les vols d\u2019\u00E9vacuation sont bloqu\u00E9s par le blizzard.',
+          sensors: [
+            'Constantes Patient : <span class="text-emerald-400">Patch Bluetooth Synchronis\u00E9</span>',
+            'Fen\u00EAtre \u00C9vacuation Air : <span class="text-red-400">Ferm\u00E9e (Temp\u00EAte 18h)</span>',
+            'Connectivit\u00E9 : <span class="text-emerald-400">100% IA Locale Edge</span>'
+          ],
+          aiSummary: 'SIMULATION. Une tablette de terrain peut afficher les m\u00EAmes cat\u00E9gories de r\u00E8gles que la d\u00E9mo spatiale. Elle n\u2019\u00E9carte aucun diagnostic et ne choisit aucun m\u00E9dicament.'
+        }
+      },
+      disaster: {
+        en: {
+          title: 'Seismic Disaster Field Triage Unit',
+          coords: "OFF-GRID DEPLOYMENT \u2022 CELLULAR NETWORK: DESTROYED",
+          desc: 'Zero-latency autonomous triage when earthquakes or hurricanes knock out regional hospital networks and cloud servers.',
+          sensors: [
+            'Air Quality / Dust PM2.5: <span class="text-amber-400">185 &mu;g/m&sup3; (Elevated)</span>',
+            'Battery Autonomy: <span class="text-emerald-400">36h Solar Microgrid</span>',
+            'Connectivity: <span class="text-emerald-400">100% Local Edge AI</span>'
+          ],
+          aiSummary: 'Multi-casualty offline triage active: prioritizing crush-syndrome hydration alerts and respiratory distress monitoring across 14 field patients with zero internet dependency.'
+        },
+        fr: {
+          title: 'Unit\u00E9 de Triage Terrain Post-S\u00E9isme',
+          coords: "D\u00C9PLOIEMENT AUTONOME \u2022 R\u00C9SEAU CELLULAIRE : D\u00C9TRUIT",
+          desc: 'Triage autonome sans latence lorsque les s\u00E9ismes ou ouragans coupent les r\u00E9seaux hospitaliers et serveurs cloud.',
+          sensors: [
+            'Qualit\u00E9 Air / Poussi\u00E8res PM2.5 : <span class="text-amber-400">185 &mu;g/m&sup3; (\u00C9lev\u00E9)</span>',
+            'Autonomie Batterie : <span class="text-emerald-400">36h Micro-r\u00E9seau Solaire</span>',
+            'Connectivit\u00E9 : <span class="text-emerald-400">100% IA Locale Edge</span>'
+          ],
+          aiSummary: 'Triage multi-victimes hors-ligne actif : priorisation des alertes d\u2019hydratation (syndrome d\u2019\u00E9crasement) et d\u00E9tresse respiratoire sur 14 patients sans connexion internet.'
+        }
+      }
+    };
+
+    // --- ASTRONAUT SELECTION CONTROLLER ---
+    function selectAstronaut(astroId) {
+      currentAstroId = astroId;
+      renderTopCrewPills();
+      applyScenarioVisuals();
+      updateLiveVitals(true);
+      renderCrewDossierView();
+    }
+
+    function visibleCrew() {
+      const all = Object.values(astronauts);
+      if (!window.GC_ALLOWED_LOCAL_IDS) return all;
+      return all.filter(a => window.GC_ALLOWED_LOCAL_IDS.includes(a.id));
+    }
+
+    function renderTopCrewPills() {
+      const container = document.getElementById('topCrewPills');
+      container.innerHTML = visibleCrew().map(a => {
+        const active = a.id === currentAstroId;
+        const isWatch = Object.values(a[currentLang].systems).some(sys => /WATCH|SUIVI|ALERTE|CRITICAL|CRITIQUE/i.test(sys.badge));
+        return `
+          <button onclick="selectAstronaut('${a.id}')" class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-mono transition-all whitespace-nowrap ${
+            active
+              ? 'bg-sky-500/25 text-white border border-sky-400/60 shadow-sm'
+              : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900 border border-transparent'
+          }">
+            <span class="w-2 h-2 rounded-full ${isWatch ? 'bg-amber-400' : 'bg-emerald-400'}"></span>
+            <span class="font-bold">${a.shortName}</span>
+          </button>
+        `;
+      }).join('');
+    }
+
+    function renderCrewDossierView() {
+      const astro = astronauts[currentAstroId];
+      const aLang = astro[currentLang];
+      const dict = i18n[currentLang];
+
+      // 1. Render 4 Crew Cards at top of View 2
+      const grid = document.getElementById('crewCardsGrid');
+      grid.innerHTML = visibleCrew().map(a => {
+        const isSelected = a.id === currentAstroId;
+        const isWatch = Object.values(a[currentLang].systems).some(sys => /WATCH|SUIVI|ALERTE/i.test(sys.badge));
+        const statusLabel = currentScenario === 'solar'
+          ? (currentLang === 'fr' ? 'ALERTE RADIATION' : 'RADIATION ALERT')
+              : a[currentLang].mood;
+        const badgeStyle = currentScenario === 'solar'
+          ? 'bg-red-500/20 text-red-300 border-red-500/40'
+          : (isWatch
+              ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+              : 'bg-emerald-500/15 text-emerald-300 border-emerald-500/35');
+
+        return `
+          <div onclick="selectAstronaut('${a.id}')" class="glass-card rounded-2xl p-4 cursor-pointer transition-all ${
+            isSelected ? 'ring-2 ring-sky-400 border-sky-400/60 bg-slate-900/90' : 'hover:border-sky-400/40 opacity-85 hover:opacity-100'
+          }">
+            <div class="flex items-start justify-between gap-2 mb-2.5">
+              <div class="flex items-center gap-2.5">
+                <div class="w-11 h-11 rounded-xl bg-gradient-to-br from-sky-500/30 to-indigo-500/20 border border-sky-400/40 flex items-center justify-center font-display font-bold text-sm text-white shrink-0">
+                  ${a.initials}
+                </div>
+                <div>
+                  <h3 class="font-display font-bold text-sm text-white leading-tight">${a.fullName}</h3>
+                  <span class="text-[10px] font-mono text-sky-400 font-semibold">${a.agency} &bull; ${a.blood}</span>
+                </div>
+              </div>
+              <span class="text-[9px] font-mono font-bold px-2 py-0.5 rounded border ${badgeStyle} shrink-0">
+                ${statusLabel}
+              </span>
+            </div>
+            <p class="text-[11px] text-slate-300 mb-3 line-clamp-1">${a[currentLang].role}</p>
+            <div class="grid grid-cols-3 gap-1.5 pt-2.5 border-t border-slate-800/80 text-center font-mono">
+              <div>
+                <span class="text-[9px] text-slate-400 block">HR</span>
+                <span class="text-xs font-bold text-white tabular-nums">${scenarios[currentScenario].hrBase + a.hrOffset}</span>
+              </div>
+              <div>
+                <span class="text-[9px] text-slate-400 block">HRV</span>
+                <span class="text-xs font-bold text-emerald-400 tabular-nums">${Math.max(20, a.hrvBase + scenarios[currentScenario].hrvDelta)}ms</span>
+              </div>
+              <div>
+                <span class="text-[9px] text-slate-400 block">RAD</span>
+                <span class="text-xs font-bold text-sky-300 tabular-nums">${(a.cumRad + scenarios[currentScenario].radDelta).toFixed(0)}mSv</span>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      // 2. Populate Dossier Main Card
+      document.getElementById('dossierAvatar').textContent = astro.initials;
+      document.getElementById('dossierFullName').textContent = astro.fullName;
+      document.getElementById('dossierAgencyTag').textContent = astro.agency;
+      document.getElementById('dossierRoleFull').textContent = aLang.role;
+      document.getElementById('dossierStreakVal').textContent = astro.streak;
+      document.getElementById('specBloodVal').textContent = `${astro.blood} / ${astro.age}`;
+      document.getElementById('specRadVal').textContent = `${(astro.cumRad + scenarios[currentScenario].radDelta).toFixed(1)} mSv`;
+      document.getElementById('specSleepVal').textContent = `${astro.sleepHrs} / ${aLang.mood}`;
+      document.getElementById('specVo2Val').textContent = astro.vo2Bone;
+      document.getElementById('dossierClinicalNote').textContent = aLang.clinicalNote;
+      document.getElementById('dossierFlightHours').textContent = `Flight Exp: ${astro.flightHours}`;
+      document.getElementById('dossierBaselineNote').textContent = `Baseline HRV: ${astro.hrvBase}ms`;
+
+      // 3. Render 7-Day Mission Trend Chart
+      const chart = document.getElementById('sevenDayChartContainer');
+      chart.innerHTML = astro.sevenDay.map(pt => {
+        const sleepPct = Math.min(100, Math.round((pt.sleep / 9) * 100));
+        const hrvPct = Math.min(100, Math.round((pt.hrv / 85) * 100));
+        return `
+          <div class="flex flex-col items-center gap-1 h-full justify-end">
+            <div class="w-full flex items-end justify-center gap-1 h-20">
+              <div class="w-2.5 bg-sky-400/80 rounded-t transition-all duration-500" style="height: ${sleepPct}%" title="Sleep: ${pt.sleep}h"></div>
+              <div class="w-2.5 bg-emerald-400/80 rounded-t transition-all duration-500" style="height: ${hrvPct}%" title="HRV: ${pt.hrv}ms"></div>
+            </div>
+            <span class="text-[9px] font-mono text-slate-400">${pt.day}</span>
+          </div>
+        `;
+      }).join('');
+
+      // 4. Render Anatomical Body System Buttons & Selected Detail
+      const sysBtns = document.getElementById('bodySystemButtons');
+      const keys = [
+        { k: 'neuro', label: dict.sysBtnNeuro },
+        { k: 'cardio', label: dict.sysBtnCardio },
+        { k: 'metabolic', label: dict.sysBtnMetabolic },
+        { k: 'radiation', label: dict.sysBtnRadiation },
+        { k: 'musculo', label: dict.sysBtnMusculo }
+      ];
+      sysBtns.innerHTML = keys.map(item => `
+        <button onclick="selectBodySystem('${item.k}')" class="px-2.5 py-1 rounded-lg text-[11px] font-mono font-semibold transition-all ${
+          currentBodySystem === item.k
+            ? 'bg-sky-400 text-slate-950'
+            : 'bg-slate-900 text-slate-300 border border-slate-700 hover:border-sky-400/50'
+        }">
+          ${item.label}
+        </button>
+      `).join('');
+
+      paintBodyMap(astro);
+      const who = document.getElementById('bodyMapWho');
+      if (who) who.textContent = `${i18n[currentLang].mapOf} ${astro.shortName}`;
+      const sysData = aLang.systems[currentBodySystem];
+      document.getElementById('bodySysTitle').textContent = sysData.title;
+      document.getElementById('bodySysBadge').textContent = sysData.badge;
+      document.getElementById('bodySysMetrics').textContent = sysData.metrics;
+      document.getElementById('bodySysDesc').textContent = sysData.desc;
+    }
+
+    function selectBodySystem(sysKey) {
+      currentBodySystem = sysKey;
+      renderCrewDossierView();
+    }
+
+    // --- LANGUAGE SWITCHER CONTROLLER ---
+    function setLanguage(lang) {
+      currentLang = lang;
+      document.documentElement.lang = lang;
+      const dict = i18n[lang];
+
+      document.querySelectorAll('.lang-btn-en').forEach(btn => {
+        btn.className = lang === 'en'
+          ? 'lang-btn-en px-2.5 py-1 rounded-full text-[11px] font-mono font-bold transition-all bg-sky-400 text-slate-950 shadow-sm'
+          : 'lang-btn-en px-2.5 py-1 rounded-full text-[11px] font-mono font-bold transition-all text-slate-400 hover:text-white';
+      });
+      document.querySelectorAll('.lang-btn-fr').forEach(btn => {
+        btn.className = lang === 'fr'
+          ? 'lang-btn-fr px-2.5 py-1 rounded-full text-[11px] font-mono font-bold transition-all bg-sky-400 text-slate-950 shadow-sm'
+          : 'lang-btn-fr px-2.5 py-1 rounded-full text-[11px] font-mono font-bold transition-all text-slate-400 hover:text-white';
+      });
+
+      document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        if (dict[key] !== undefined) {
+          el.innerHTML = dict[key];
+        }
+      });
+      document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+        const key = el.getAttribute('data-i18n-placeholder');
+        if (dict[key] !== undefined) el.placeholder = dict[key];
+      });
+
+      document.getElementById('symptomInput').placeholder = dict.symptomPlaceholder;
+
+      applyScenarioVisuals();
+      renderCrewDossierView();
+      selectEarthProfile(currentEarthProfile);
+      if (!document.getElementById('symptomParsedOutput').classList.contains('hidden')) {
+        parseSymptomLog();
+      }
+      if (window.onGravityLanguage) window.onGravityLanguage();
+    }
+
+    function zoneTone(badge) {
+      const text = String(badge || '').toUpperCase();
+      if (/CRITICAL|ALERT|CRITIQUE/.test(text)) return 'alert';
+      if (/WATCH|SUIVI|ALERTE/.test(text)) return 'watch';
+      return 'nominal';
+    }
+
+    function paintBodyMap(astro) {
+      const colors = {
+        nominal: ['#10B981', 'rgba(16,185,129,0.28)'],
+        watch: ['#F59E0B', 'rgba(245,158,11,0.34)'],
+        alert: ['#EF4444', 'rgba(239,68,68,0.36)']
+      };
+      const systems = astro[currentLang].systems;
+      document.querySelectorAll('[data-zone]').forEach(node => {
+        const tone = zoneTone(systems[node.dataset.zone]?.badge);
+        const [core, glow] = colors[tone];
+        const halo = node.querySelector('.zone-glow');
+        const dot = node.querySelector('.hotspot-core');
+        if (halo) halo.setAttribute('fill', glow);
+        if (dot) dot.setAttribute('fill', core);
+        node.dataset.tone = tone;
+      });
+    }
+
+    // --- VIEW SWITCHER ---
+    function switchView(viewName) {
+      currentView = viewName;
+      ['cockpit', 'crew', 'emergency', 'dualuse', 'ward', 'nutrition', 'alerts', 'messages', 'ground', 'admin'].forEach(v => {
+        const view = document.getElementById(`view-${v}`);
+        if (view) view.classList.add('hidden');
+        const tab = document.getElementById(`tab-${v}`);
+        if (!tab || tab.classList.contains('hidden')) return;
+        tab.className = 'nav-tab px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-display font-semibold transition-all text-slate-400 hover:text-white border border-transparent whitespace-nowrap flex items-center gap-1.5';
+      });
+
+      document.getElementById(`view-${viewName}`).classList.remove('hidden');
+      if (window.onGravityView) window.onGravityView(viewName);
+      const activeTab = document.getElementById(`tab-${viewName}`);
+      if (!activeTab) return;
+      if (viewName === 'emergency') {
+        activeTab.className = 'nav-tab px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-display font-semibold transition-all bg-red-500/20 text-red-300 border border-red-400/50 whitespace-nowrap flex items-center gap-1.5';
+      } else {
+        activeTab.className = 'nav-tab px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-display font-semibold transition-all bg-sky-500/20 text-sky-300 border border-sky-400/40 whitespace-nowrap flex items-center gap-1.5';
+      }
+
+      if (viewName === 'cockpit') {
+        resizeCanvas();
+      } else if (viewName === 'crew') {
+        renderCrewDossierView();
+      }
+    }
+
+    // --- SCENARIO CONTROLLER ---
+    function setScenario(scenarioKey) {
+      currentScenario = scenarioKey;
+      protocolSeconds = 0;
+
+      document.querySelectorAll('.sim-btn').forEach(btn => {
+        btn.classList.remove('ring-2', 'ring-white', 'scale-[1.02]');
+      });
+      const activeBtn = document.getElementById(`sim-btn-${scenarioKey}`);
+      if (activeBtn) {
+        activeBtn.classList.add('ring-2', 'ring-white', 'scale-[1.02]');
+      }
+
+      applyScenarioVisuals();
+      updateLiveVitals(true);
+      renderCrewDossierView();
+    }
+
+    function applyScenarioVisuals() {
+      const s = scenarios[currentScenario];
+      const langData = s[currentLang];
+      const astro = astronauts[currentAstroId];
+
+      // Update Cockpit Astronaut Identity Strip
+      document.getElementById('cockpitAstroAvatar').textContent = astro.initials;
+      document.getElementById('cockpitAstroName').textContent = astro.fullName;
+      document.getElementById('cockpitAstroAgency').textContent = astro.agency;
+      document.getElementById('cockpitAstroRole').textContent = astro[currentLang].role;
+      document.getElementById('cockpitAstroBlood').textContent = `${astro.blood} (${astro.age})`;
+      document.getElementById('cockpitAstroSleep').textContent = `Sleep: ${astro.sleepHrs}`;
+      document.getElementById('cockpitAstroBp').textContent = `BP: ${astro.bp}`;
+
+      // Update Individual ARED & SANS in Cockpit
+      document.getElementById('gravStatusText').textContent = `${astro.aredPct}% ARED`;
+      document.getElementById('gravDetailText').textContent = astro.aredMins;
+      document.getElementById('gravBar').style.width = `${astro.aredPct}%`;
+      document.getElementById('sansBadge').textContent = `IOP: ${astro.iop}`;
+
+      // Body ambient theme
+      document.body.classList.remove('mode-warning', 'mode-critical');
+      if (s.bodyClass) document.body.classList.add(s.bodyClass);
+
+      // Card border glow states
+      ['ridgePanelCard', 'biometricsCard', 'copilotCard'].forEach(id => {
+        const el = document.getElementById(id);
+        el.classList.remove('state-warning', 'state-critical');
+        if (s.cardClass) el.classList.add(s.cardClass);
+      });
+
+      // Global Alert Banner
+      const banner = document.getElementById('globalAlertBanner');
+      const bannerInner = document.getElementById('globalAlertInner');
+      const emergencyDot = document.getElementById('emergencyTabDot');
+
+      if (currentScenario === 'nominal') {
+        banner.classList.add('hidden');
+        emergencyDot.classList.add('hidden');
+      } else if (currentScenario === 'solar') {
+        banner.classList.remove('hidden');
+        emergencyDot.classList.remove('hidden');
+        bannerInner.className = 'rounded-2xl p-3.5 border border-red-500/65 bg-red-950/65 flex flex-col sm:flex-row sm:items-center justify-between gap-3 backdrop-blur-md';
+        document.getElementById('alertBannerTitle').textContent = langData.alertTitle;
+        document.getElementById('alertBannerTitle').className = 'font-display font-bold text-xs sm:text-sm uppercase tracking-wider text-red-300';
+        document.getElementById('alertBannerDesc').textContent = langData.alertDesc;
+      } else if (currentScenario === 'co2') {
+        banner.classList.remove('hidden');
+        emergencyDot.classList.remove('hidden');
+        bannerInner.className = 'rounded-2xl p-3.5 border border-amber-500/65 bg-amber-950/55 flex flex-col sm:flex-row sm:items-center justify-between gap-3 backdrop-blur-md';
+        document.getElementById('alertBannerTitle').textContent = langData.alertTitle;
+        document.getElementById('alertBannerTitle').className = 'font-display font-bold text-xs sm:text-sm uppercase tracking-wider text-amber-300';
+        document.getElementById('alertBannerDesc').textContent = langData.alertDesc;
+      }
+
+      // RIDGE-5 SVG Gauge & Pill
+      document.getElementById('ridgeScoreNumber').textContent = s.ridgeNumber;
+      const circle = document.getElementById('ridgeGaugeCircle');
+      circle.style.strokeDashoffset = s.gaugeOffset;
+      circle.style.stroke = s.gaugeColor;
+
+      const ridgePill = document.getElementById('ridgeStatusPill');
+      ridgePill.textContent = langData.ridgePill;
+      ridgePill.className = `inline-block mt-1 font-mono font-bold text-[11px] px-2 py-0.5 rounded-md border ${s.ridgePillClass}`;
+
+      // Individual Cumulative Radiation
+      const totalRad = (astro.cumRad + s.radDelta).toFixed(1);
+      const radPctNum = currentScenario === 'solar' ? 88 : Math.min(100, ((astro.cumRad + s.radDelta) / 600) * 100).toFixed(1);
+      document.getElementById('radRateText').textContent = s.radRate;
+      document.getElementById('radRateText').className = `font-mono text-xs font-bold tabular-nums ${s.radTextColor}`;
+      document.getElementById('radCumText').textContent = `${totalRad} / 600 mSv`;
+      const radBar = document.getElementById('radBar');
+      radBar.style.width = `${radPctNum}%`;
+      radBar.className = `h-full rounded-full transition-all duration-500 ${s.radColor}`;
+      document.getElementById('dot-radiation').className = `w-2 h-2 rounded-full ${s.radColor}`;
+
+      // Environment
+      document.getElementById('co2Text').textContent = langData.co2;
+      document.getElementById('co2Text').className = `font-mono text-xs font-bold tabular-nums ${s.co2TextColor}`;
+      document.getElementById('o2Text').textContent = s.o2;
+      document.getElementById('envQualityText').textContent = langData.envQuality;
+      document.getElementById('envQualityText').className = `font-semibold ${s.co2TextColor}`;
+      const co2Bar = document.getElementById('co2Bar');
+      co2Bar.style.width = s.co2Pct;
+      co2Bar.className = `h-full rounded-full transition-all duration-500 ${s.co2Color}`;
+      document.getElementById('dot-environment').className = `w-2 h-2 rounded-full ${s.co2Color}`;
+
+      // Cognitive
+      document.getElementById('cogScoreText').textContent = langData.cogScore;
+      document.getElementById('cogBar').style.width = s.cogPct;
+
+      // ECG Badge
+      const ecgBadge = document.getElementById('ecgRhythmBadge');
+      ecgBadge.textContent = langData.ecgBadge;
+      ecgBadge.className = `font-mono text-[11px] font-semibold px-2.5 py-1 rounded-lg border ${s.ecgBadgeClass}`;
+
+      // Vital trend labels
+      const trendColor = currentScenario === 'nominal' ? 'text-emerald-400' : (currentScenario === 'solar' ? 'text-red-400' : 'text-amber-400');
+      document.getElementById('vital-hr-trend').textContent = langData.hrTrend;
+      document.getElementById('vital-hr-trend').className = `text-[10px] font-mono block mt-0.5 truncate ${trendColor}`;
+      document.getElementById('vital-spo2-trend').textContent = langData.spo2Trend;
+      document.getElementById('vital-spo2-trend').className = `text-[10px] font-mono block mt-0.5 truncate ${currentScenario === 'co2' ? 'text-amber-400' : 'text-emerald-400'}`;
+      document.getElementById('vital-hrv-trend').textContent = langData.hrvTrend;
+      document.getElementById('vital-hrv-trend').className = `text-[10px] font-mono block mt-0.5 truncate ${trendColor}`;
+      document.getElementById('vital-temp-trend').textContent = langData.tempTrend;
+      document.getElementById('vital-temp-trend').className = `text-[10px] font-mono block mt-0.5 truncate ${currentScenario === 'co2' ? 'text-amber-400' : 'text-emerald-400'}`;
+
+      // GravityCare Copilot Personalized Synthesis
+      const sevTag = document.getElementById('aiSeverityTag');
+      sevTag.textContent = langData.aiSeverity;
+      sevTag.className = `text-[10px] font-mono px-2 py-0.5 rounded font-bold ${s.aiSeverityClass}`;
+      document.getElementById('aiConfidenceBadge').textContent = s.aiConf;
+      document.getElementById('aiSynthesisText').textContent = langData.aiSynthesis(astro);
+
+      renderCountermeasures();
+      renderCmoProtocol();
+    }
+
+    // --- RENDER COUNTERMEASURES CHECKLIST ---
+    function renderCountermeasures() {
+      const list = document.getElementById('countermeasuresList');
+      const labels = scenarios[currentScenario][currentLang].countermeasures;
+      const states = checklistDoneState[currentScenario];
+      list.innerHTML = '';
+
+      labels.forEach((text, idx) => {
+        const isDone = states[idx];
+        const row = document.createElement('label');
+        row.className = `flex items-start gap-2.5 p-2.5 rounded-xl border cursor-pointer transition-all ${
+          isDone
+            ? 'bg-emerald-950/25 border-emerald-500/35 text-slate-400 line-through'
+            : 'bg-slate-950/75 border-slate-800 hover:border-sky-500/45 text-slate-200'
+        }`;
+        row.innerHTML = `
+          <input type="checkbox" ${isDone ? 'checked' : ''} onchange="toggleCountermeasure(${idx})"
+            class="mt-0.5 rounded accent-sky-400 w-4 h-4 cursor-pointer shrink-0" />
+          <span class="text-xs leading-snug">${text}</span>
+        `;
+        list.appendChild(row);
+      });
+
+      const completed = states.filter(Boolean).length;
+      document.getElementById('checklistCounter').textContent = `${completed}/${labels.length}`;
+      document.getElementById('checklistProgressBar').style.width = `${Math.round((completed / labels.length) * 100)}%`;
+    }
+
+    function toggleCountermeasure(index) {
+      checklistDoneState[currentScenario][index] = !checklistDoneState[currentScenario][index];
+      renderCountermeasures();
+    }
+
+    // --- RENDER VIEW 3: CMO PROTOCOL ---
+    function renderCmoProtocol() {
+      const langData = scenarios[currentScenario][currentLang];
+      const states = cmoDoneState[currentScenario];
+      const dict = i18n[currentLang];
+
+      document.getElementById('cmoProtocolTitle').textContent = langData.cmoTitle;
+
+      const kitContainer = document.getElementById('cmoKitBadges');
+      kitContainer.innerHTML = langData.cmoKit
+        .map(k => `<span class="px-2.5 py-1 rounded-lg bg-slate-900 text-slate-200 border border-slate-700">${k}</span>`)
+        .join('');
+
+      const stepsContainer = document.getElementById('cmoStepsContainer');
+      stepsContainer.innerHTML = '';
+
+      langData.cmoSteps.forEach((step, idx) => {
+        const isDone = states[idx];
+        const card = document.createElement('div');
+        card.className = `p-4 rounded-xl border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${
+          isDone
+            ? 'bg-emerald-950/30 border-emerald-500/45'
+            : 'bg-slate-950/80 border-slate-700/90'
+        }`;
+        card.innerHTML = `
+          <div>
+            <h3 class="font-display font-bold text-base ${isDone ? 'text-emerald-300 line-through' : 'text-white'}">
+              ${step.title}
+            </h3>
+            <p class="text-xs sm:text-sm text-slate-300 mt-1">${step.detail}</p>
+          </div>
+          <button onclick="toggleCmoStep(${idx})" class="px-4 py-2.5 rounded-xl font-mono text-xs font-bold shrink-0 transition-colors ${
+            isDone
+              ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/45'
+              : 'bg-sky-500 hover:bg-sky-400 text-slate-950'
+          }">
+            ${isDone ? dict.stepDoneBtn : dict.stepMarkBtn}
+          </button>
+        `;
+        stepsContainer.appendChild(card);
+      });
+    }
+
+    function toggleCmoStep(idx) {
+      cmoDoneState[currentScenario][idx] = !cmoDoneState[currentScenario][idx];
+      renderCmoProtocol();
+    }
+
+    function resetCmoSteps() {
+      cmoDoneState[currentScenario] = cmoDoneState[currentScenario].map(() => false);
+      protocolSeconds = 0;
+      renderCmoProtocol();
+    }
+
+    // --- VIEW 4: EARTH DUAL-USE SELECTOR ---
+    function selectEarthProfile(key) {
+      currentEarthProfile = key;
+      const p = earthProfiles[key][currentLang];
+      document.querySelectorAll('.earth-btn').forEach(btn => {
+        btn.className = 'earth-btn px-3 py-2 rounded-xl text-xs font-display font-semibold bg-slate-900 text-slate-400 border border-slate-700 hover:text-white';
+      });
+      document.getElementById(`earth-btn-${key}`).className =
+        'earth-btn px-3 py-2 rounded-xl text-xs font-display font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-400/45';
+
+      document.getElementById('earthNodeTitle').textContent = p.title;
+      document.getElementById('earthNodeCoords').textContent = p.coords;
+      document.getElementById('earthNodeDesc').textContent = p.desc;
+      document.getElementById('earthSensorsList').innerHTML = p.sensors.map(s => `<li>&bull; ${s}</li>`).join('');
+      document.getElementById('earthAiSummary').textContent = p.aiSummary;
+    }
+
+    // --- SYMPTOM NLP PARSER SIMULATOR ---
+    function fillSymptom(presetKey) {
+      const dict = i18n[currentLang];
+      document.getElementById('symptomInput').value = presetKey === 'preset1' ? dict.preset1Text : dict.preset2Text;
+      parseSymptomLog();
+    }
+
+    function parseSymptomLog() {
+      const input = document.getElementById('symptomInput').value.trim();
+      const out = document.getElementById('symptomParsedOutput');
+      const dict = i18n[currentLang];
+      if (!input) return;
+
+      out.classList.remove('hidden');
+      const lower = input.toLowerCase();
+      let tags = [];
+      let action = '';
+
+      if (lower.includes('vision') || lower.includes('blurred') || lower.includes('floue') || lower.includes('ocular') || lower.includes('glare')) {
+        tags = ['SANS_SCREENING', 'CEPHALIC_FLUID_SHIFT', 'OCT_PRIORITY'];
+        action = dict.nlpSansAction;
+      } else if (lower.includes('headache') || lower.includes('c\u00E9phal\u00E9e') || lower.includes('eva') || lower.includes('fatigue')) {
+        tags = ['POST_EVA_EXERTION', 'HYPERCAPNIA_CHECK', 'HYDRATION_DEFICIT'];
+        action = dict.nlpEvaAction;
+      } else {
+        tags = ['SUBJECTIVE_LOG_STRUCTURED', 'MED_GEMMA_TRIAGE', 'DSN_PACKET_READY'];
+        action = dict.nlpDefaultAction;
+      }
+
+      out.innerHTML = `
+        <div class="text-sky-300 font-bold mb-1">${dict.nlpHeader}</div>
+        <div class="flex flex-wrap gap-1 mb-1.5">
+          ${tags.map(t => `<span class="px-1.5 py-0.5 rounded bg-sky-500/20 text-sky-300 text-[10px]">#${t}</span>`).join('')}
+        </div>
+        <div class="text-slate-300">${action}</div>
+      `;
+    }
+
+    // --- QUICK SANS OCULAR CHECK ---
+    function runQuickOcularCheck() {
+      const badge = document.getElementById('sansBadge');
+      const desc = document.getElementById('sansDesc');
+      const dict = i18n[currentLang];
+
+      badge.textContent = dict.sansScanning;
+      badge.className = 'font-mono text-[11px] font-semibold px-2 py-0.5 rounded bg-sky-500/20 text-sky-300 border border-sky-400/40';
+      setTimeout(() => {
+        badge.textContent = dict.sansVerifiedBadge;
+        badge.className = 'font-mono text-[11px] font-semibold px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/30';
+        desc.textContent = dict.sansVerifiedDesc;
+        document.getElementById('amslerScore').textContent = dict.amslerClear;
+      }, 850);
+    }
+
+    // --- LIVE VITALS & MISSION CLOCK TICKER ---
+    function updateLiveVitals(immediate = false) {
+      const s = scenarios[currentScenario];
+      const astro = astronauts[currentAstroId];
+      const jitterHR = immediate ? 0 : Math.floor(Math.random() * 5) - 2;
+      const jitterHRV = immediate ? 0 : Math.floor(Math.random() * 5) - 2;
+
+      const hr = s.hrBase + astro.hrOffset + jitterHR;
+      const spo2 = Math.min(100, astro.spo2Base + s.spo2Delta);
+      const hrv = Math.max(18, astro.hrvBase + s.hrvDelta + jitterHRV);
+      const temp = (astro.temp + s.tempDelta).toFixed(1);
+
+      document.getElementById('vital-hr').textContent = hr;
+      document.getElementById('liveBpmOverlay').textContent = `${hr} BPM`;
+      document.getElementById('liveBpmOverlay').style.color = s.ecgColor;
+      document.getElementById('vital-spo2').textContent = spo2;
+      document.getElementById('vital-hrv').textContent = hrv;
+      document.getElementById('vital-bp').textContent = astro.bp;
+      document.getElementById('vital-glucose').textContent = astro.glucose;
+      document.getElementById('vital-temp').textContent = temp;
+    }
+
+    setInterval(() => {
+      missionSeconds++;
+      const d = Math.floor(missionSeconds / 86400);
+      const h = Math.floor((missionSeconds % 86400) / 3600);
+      const m = Math.floor((missionSeconds % 3600) / 60);
+      const sec = missionSeconds % 60;
+      document.getElementById('metClock').textContent =
+        `MET: ${d}d ${String(h).padStart(2, '0')}h ${String(m).padStart(2, '0')}m ${String(sec).padStart(2, '0')}s`;
+
+      if (currentView === 'emergency') {
+        protocolSeconds++;
+        const pm = Math.floor(protocolSeconds / 60);
+        const ps = protocolSeconds % 60;
+        document.getElementById('protocolTimer').textContent =
+          `${String(pm).padStart(2, '0')}:${String(ps).padStart(2, '0')}`;
+      }
+
+      updateLiveVitals(false);
+    }, 1000);
+
+    // --- REAL-TIME HTML5 CANVAS ECG WAVEFORM ---
+    const canvas = document.getElementById('ecgCanvas');
+    const ctx = canvas.getContext('2d');
+    let ecgX = 0;
+    let ecgPhase = 0;
+    let points = [];
+
+    function resizeCanvas() {
+      if (!canvas || !canvas.parentElement) return;
+      const rect = canvas.parentElement.getBoundingClientRect();
+      canvas.width = rect.width;
+      canvas.height = rect.height;
+      points = new Array(Math.ceil(canvas.width)).fill(canvas.height / 2);
+    }
+
+    window.addEventListener('resize', resizeCanvas);
+
+    function getEcgSample(phase, height) {
+      const mid = height * 0.54;
+      const amp = height * 0.36;
+      const p = phase % 1;
+
+      if (p > 0.10 && p < 0.18) {
+        return mid - amp * 0.16 * Math.sin(((p - 0.10) / 0.08) * Math.PI);
+      }
+      if (p >= 0.22 && p < 0.245) {
+        return mid + amp * 0.18 * Math.sin(((p - 0.22) / 0.025) * Math.PI);
+      }
+      if (p >= 0.245 && p < 0.285) {
+        return mid - amp * 1.15 * Math.sin(((p - 0.245) / 0.04) * Math.PI);
+      }
+      if (p >= 0.285 && p < 0.315) {
+        return mid + amp * 0.28 * Math.sin(((p - 0.285) / 0.03) * Math.PI);
+      }
+      if (p > 0.42 && p < 0.56) {
+        return mid - amp * 0.26 * Math.sin(((p - 0.42) / 0.14) * Math.PI);
+      }
+      return mid + (Math.random() - 0.5) * 1.3;
+    }
+
+    function animateEcg() {
+      if (currentView === 'cockpit' && canvas.width > 0) {
+        const s = scenarios[currentScenario];
+        const astro = astronauts[currentAstroId];
+        const beatsPerSec = (s.hrBase + astro.hrOffset) / 60;
+        const speedPx = 2.4;
+
+        for (let i = 0; i < speedPx; i++) {
+          ecgPhase += (beatsPerSec / 60) * 0.85;
+          ecgX = (ecgX + 1) % canvas.width;
+          points[Math.floor(ecgX)] = getEcgSample(ecgPhase, canvas.height);
+        }
+
+        ctx.fillStyle = '#03050B';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        ctx.strokeStyle = 'rgba(56, 189, 248, 0.07)';
+        ctx.lineWidth = 1;
+        const gridStep = 18;
+        for (let x = 0; x < canvas.width; x += gridStep) {
+          ctx.beginPath();
+          ctx.moveTo(x, 0);
+          ctx.lineTo(x, canvas.height);
+          ctx.stroke();
+        }
+        for (let y = 0; y < canvas.height; y += gridStep) {
+          ctx.beginPath();
+          ctx.moveTo(0, y);
+          ctx.lineTo(canvas.width, y);
+          ctx.stroke();
+        }
+
+        ctx.strokeStyle = s.ecgColor;
+        ctx.lineWidth = 2;
+        ctx.shadowColor = s.ecgColor;
+        ctx.shadowBlur = 7;
+        ctx.beginPath();
+
+        const gap = 18;
+        let started = false;
+        for (let x = 0; x < points.length; x++) {
+          const dist = (x - ecgX + points.length) % points.length;
+          if (dist < gap) {
+            started = false;
+            continue;
+          }
+          if (!started) {
+            ctx.moveTo(x, points[x]);
+            started = true;
+          } else {
+            ctx.lineTo(x, points[x]);
+          }
+        }
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+      }
+      requestAnimationFrame(animateEcg);
+    }
+
+    // --- INITIALIZE ON LOAD ---
+    window.onload = function () {
+      resizeCanvas();
+      renderTopCrewPills();
+      setLanguage('fr');
+      setScenario('nominal');
+      animateEcg();
+    };
+  </script>
+  <script src="/js/client.js"></script>
+</body>
+</html>

@@ -1,0 +1,271 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// SQLite has no enums. Allowed strings live in src/common/constants.ts.
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  firstName    String
+  lastName     String
+  role         String
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  astronautProfile AstronautProfile?
+  medicalNotes     MedicalNote[]      @relation("DoctorNotes")
+  sentMessages     Message[]          @relation("SentMessages")
+  receivedMessages Message[]          @relation("ReceivedMessages")
+  doctorAssignments DoctorAssignment[] @relation("DoctorAssignments")
+  reviewedPlans    NutritionPlan[]    @relation("PlanReviewer")
+  auditLogs        AuditLog[]
+}
+
+model Mission {
+  id                         String    @id @default(cuid())
+  name                       String
+  code                       String    @unique
+  startDate                  DateTime
+  endDate                    DateTime?
+  status                     String    @default("ACTIVE")
+  environment                String    @default("MICROGRAVITY")
+  waterBudgetMlPerCrewPerDay Int?
+  notes                      String?
+  createdAt                  DateTime  @default(now())
+
+  astronauts AstronautProfile[]
+  menuItems  MissionMenuItem[]
+}
+
+model AstronautProfile {
+  id                String   @id @default(cuid())
+  userId            String   @unique
+  missionId         String?
+  callSign          String
+  agency            String
+  bloodType         String?
+  age               Int?
+  heightCm          Float?
+  weightKg          Float?
+  sex               String?
+  flightHours       Int      @default(0)
+  missionDay        Int?
+  allergies         String?
+  intolerances      String?
+  preferences       String?
+  medicalHistory    String?
+  currentTreatments String?
+  conditions        String?
+  baselineHrv       Float?
+  demoScenario      String?
+  fictitious        Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  user           User                @relation(fields: [userId], references: [id])
+  mission        Mission?            @relation(fields: [missionId], references: [id])
+  vitals         VitalMeasurement[]
+  nutritionLogs  NutritionLog[]
+  alerts         Alert[]
+  medicalNotes   MedicalNote[]
+  symptoms       SymptomReport[]
+  assignments    DoctorAssignment[]
+  nutritionPlans NutritionPlan[]
+  reports        HealthReport[]
+}
+
+model DoctorAssignment {
+  id          String   @id @default(cuid())
+  doctorId    String
+  astronautId String
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  doctor    User             @relation("DoctorAssignments", fields: [doctorId], references: [id])
+  astronaut AstronautProfile @relation(fields: [astronautId], references: [id])
+
+  @@unique([doctorId, astronautId])
+}
+
+model VitalMeasurement {
+  id          String   @id @default(cuid())
+  astronautId String
+  type        String
+  value       Float
+  unit        String
+  measuredAt  DateTime @default(now())
+  source      String   @default("SIMULATED")
+  notes       String?
+
+  astronaut AstronautProfile @relation(fields: [astronautId], references: [id])
+
+  @@index([astronautId, type, measuredAt])
+}
+
+model FoodItem {
+  id           String  @id @default(cuid())
+  code         String  @unique
+  nameEn       String
+  nameFr       String
+  kcal         Float
+  proteinG     Float
+  carbsG       Float
+  fatG         Float
+  calciumMg    Float   @default(0)
+  vitaminDIu   Float   @default(0)
+  ironMg       Float   @default(0)
+  vitaminB12Ug Float   @default(0)
+  folateUg     Float   @default(0)
+  magnesiumMg  Float   @default(0)
+  waterMl      Float   @default(0)
+  allergens    String  @default("[]")
+  tags         String  @default("[]")
+  prep         String
+  portionLabel String
+  demoEstimate Boolean @default(true)
+
+  menuLinks MissionMenuItem[]
+}
+
+model MissionMenuItem {
+  id        String  @id @default(cuid())
+  missionId String
+  foodId    String
+  available Boolean @default(true)
+
+  mission Mission  @relation(fields: [missionId], references: [id])
+  food    FoodItem @relation(fields: [foodId], references: [id])
+
+  @@unique([missionId, foodId])
+}
+
+model NutritionLog {
+  id            String   @id @default(cuid())
+  astronautId   String
+  date          DateTime
+  mealType      String
+  items         String
+  estimatedKcal Float?
+  proteinG      Float?
+  carbsG        Float?
+  fatG          Float?
+  hydrationMl   Float?
+  notes         String?
+  createdAt     DateTime @default(now())
+
+  astronaut AstronautProfile @relation(fields: [astronautId], references: [id])
+
+  @@index([astronautId, date])
+}
+
+model NutritionPlan {
+  id          String    @id @default(cuid())
+  astronautId String
+  payload     String
+  status      String    @default("DRAFT")
+  reviewerId  String?
+  reviewNote  String?
+  reviewedAt  DateTime?
+  createdAt   DateTime  @default(now())
+
+  astronaut AstronautProfile @relation(fields: [astronautId], references: [id])
+  reviewer  User?            @relation("PlanReviewer", fields: [reviewerId], references: [id])
+}
+
+model Alert {
+  id          String    @id @default(cuid())
+  astronautId String
+  type        String
+  severity    String
+  status      String    @default("NEW")
+  title       String
+  description String
+  payload     String?
+  aiReport    String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  resolvedAt  DateTime?
+
+  astronaut AstronautProfile @relation(fields: [astronautId], references: [id])
+
+  @@index([astronautId, status, severity])
+}
+
+model MedicalNote {
+  id          String   @id @default(cuid())
+  astronautId String
+  doctorId    String
+  content     String
+  isPrivate   Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  astronaut AstronautProfile @relation(fields: [astronautId], references: [id])
+  doctor    User             @relation("DoctorNotes", fields: [doctorId], references: [id])
+}
+
+model SymptomReport {
+  id          String   @id @default(cuid())
+  astronautId String
+  content     String
+  tags        String   @default("[]")
+  reportedAt  DateTime @default(now())
+
+  astronaut AstronautProfile @relation(fields: [astronautId], references: [id])
+}
+
+model Message {
+  id         String   @id @default(cuid())
+  senderId   String
+  receiverId String
+  content    String
+  alertId    String?
+  clientId   String?
+  simulated  Boolean  @default(true)
+  isRead     Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  sender   User @relation("SentMessages", fields: [senderId], references: [id])
+  receiver User @relation("ReceivedMessages", fields: [receiverId], references: [id])
+}
+
+model HealthReport {
+  id          String   @id @default(cuid())
+  astronautId String
+  alertId     String?
+  kind        String
+  payload     String
+  createdAt   DateTime @default(now())
+
+  astronaut AstronautProfile @relation(fields: [astronautId], references: [id])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  action    String
+  resource  String
+  detail    String?
+  createdAt DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id])
+}
+
+model SyncOperation {
+  id        String   @id @default(cuid())
+  userId    String
+  clientId  String
+  kind      String
+  payload   String
+  status    String   @default("SYNCED")
+  createdAt DateTime @default(now())
+
+  @@unique([userId, clientId])
+}
