@@ -931,7 +931,22 @@
         <p class="text-[10px] font-mono uppercase tracking-widest text-sky-300" data-i18n="wardEyebrow">Assigned crew · fictional</p>
         <h2 class="font-display font-bold text-xl text-white mt-1" data-i18n="wardTitle">Clinical board</h2>
         <p class="text-xs text-slate-400 mt-1" data-i18n="wardLead">Open a file to see that person’s body map.</p>
+        <div id="wardStats" class="mt-4 grid grid-cols-2 lg:grid-cols-4 gap-3"></div>
+        <div class="mt-4 flex flex-col sm:flex-row gap-2">
+          <input id="wardSearch" type="search" placeholder="Alex, Maya…" class="flex-1 rounded-xl bg-slate-950 border border-slate-700 px-3 py-2 text-sm" />
+          <select id="wardFilter" class="rounded-xl bg-slate-950 border border-slate-700 px-3 py-2 text-sm">
+            <option value="all">All</option>
+            <option value="stable">Stable</option>
+            <option value="watch">Watch</option>
+            <option value="critical">Critical</option>
+          </select>
+          <select id="wardSort" class="rounded-xl bg-slate-950 border border-slate-700 px-3 py-2 text-sm">
+            <option value="name">Name</option>
+            <option value="alert">Alert</option>
+          </select>
+        </div>
         <div id="wardBody" class="mt-4 grid md:grid-cols-2 gap-3"></div>
+        <div id="wardProfile" class="hidden mt-4 rounded-2xl border border-slate-800 p-4"></div>
       </div>
     </section>
 
@@ -1049,8 +1064,8 @@
       vance: {
         id: 'vance',
         initials: 'KV',
-        shortName: 'CDR. Vance',
-        fullName: 'CDR. Kathryn Vance',
+        shortName: 'Alex',
+        fullName: 'Alex',
         agency: 'NASA',
         blood: 'O+',
         age: '41y',
@@ -1105,8 +1120,8 @@
       chen: {
         id: 'chen',
         initials: 'MC',
-        shortName: 'PLT. Chen',
-        fullName: 'PLT. Marcus Chen',
+        shortName: 'Maya',
+        fullName: 'Maya',
         agency: 'NASA',
         blood: 'A-',
         age: '36y',
@@ -1161,8 +1176,8 @@
       diallo: {
         id: 'diallo',
         initials: 'AD',
-        shortName: 'Dr. Diallo',
-        fullName: 'MS-1. Dr. Amina Diallo',
+        shortName: 'Sam',
+        fullName: 'Sam',
         agency: 'NASA',
         blood: 'B+',
         age: '38y',
@@ -1217,8 +1232,8 @@
       tremblay: {
         id: 'tremblay',
         initials: 'LT',
-        shortName: 'MS-2. Tremblay',
-        fullName: 'MS-2. Luc Tremblay',
+        shortName: 'Lina',
+        fullName: 'Lina',
         agency: 'CSA / ASC',
         blood: 'O-',
         age: '39y',

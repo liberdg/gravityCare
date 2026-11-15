@@ -9,8 +9,11 @@ dotenv.config();
 const prisma = new PrismaClient();
 
 function at(daysAgo: number, hour = 12): Date {
-  const now = new Date();
-  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - daysAgo, hour, 0, 0));
+  const stamp = new Date(Date.now() - daysAgo * 86400000);
+  stamp.setUTCMinutes(0, 0, 0);
+  stamp.setUTCHours(hour);
+  if (stamp.getTime() > Date.now() - 60_000) stamp.setTime(Date.now() - daysAgo * 86400000 - 3_600_000);
+  return stamp;
 }
 
 async function main() {
@@ -117,22 +120,22 @@ async function main() {
   }
 
   const vance = await crew({
-    email: 'k.vance@nasa.gov', firstName: 'Kathryn', lastName: 'Vance', callSign: 'CDR. Vance', agency: 'NASA',
+    email: 'k.vance@nasa.gov', firstName: 'Alex', lastName: 'Vance', callSign: 'CDR. Vance', agency: 'NASA',
     bloodType: 'O+', age: 41, heightCm: 172, weightKg: 68, sex: 'F', flightHours: 4210, baselineHrv: 64,
     missionDay: 142, allergies: [], intolerances: [], preferences: ['salmon'], conditions: [], demoScenario: 'healthy'
   });
   const chen = await crew({
-    email: 'm.chen@nasa.gov', firstName: 'Marcus', lastName: 'Chen', callSign: 'PLT. Chen', agency: 'NASA',
+    email: 'm.chen@nasa.gov', firstName: 'Maya', lastName: 'Chen', callSign: 'PLT. Chen', agency: 'NASA',
     bloodType: 'A-', age: 36, heightCm: 178, weightKg: 74, sex: 'M', flightHours: 2890, baselineHrv: 58,
     missionDay: 142, allergies: ['peanut'], intolerances: [], preferences: [], conditions: [], demoScenario: 'weight-loss'
   });
   const diallo = await crew({
-    email: 'a.diallo@nasa.gov', firstName: 'Amina', lastName: 'Diallo', callSign: 'Dr. Diallo', agency: 'NASA',
+    email: 'a.diallo@nasa.gov', firstName: 'Sam', lastName: 'Diallo', callSign: 'Dr. Diallo', agency: 'NASA',
     bloodType: 'B+', age: 38, heightCm: 168, weightKg: 62, sex: 'F', flightHours: 1940, baselineHrv: 71,
     missionDay: 142, allergies: [], intolerances: [], preferences: ['oatmeal'], conditions: [], demoScenario: 'sleep-fatigue'
   });
   const tremblay = await crew({
-    email: 'l.tremblay@asc-csa.gc.ca', firstName: 'Luc', lastName: 'Tremblay', callSign: 'MS-2. Tremblay', agency: 'CSA / ASC',
+    email: 'l.tremblay@asc-csa.gc.ca', firstName: 'Lina', lastName: 'Tremblay', callSign: 'MS-2. Tremblay', agency: 'CSA / ASC',
     bloodType: 'O-', age: 39, heightCm: 181, weightKg: 79, sex: 'M', flightHours: 2450, baselineHrv: 51,
     missionDay: 142, allergies: [], intolerances: ['lactose'], preferences: [], conditions: [], demoScenario: 'bone'
   });

@@ -11,14 +11,11 @@ import { CRITICAL_SYMPTOM_PATTERNS } from '../alerts/alert.rules.js';
 
 export const astronautsRouter = Router();
 
-async function alertSummary(astronautId: string) {
-  const open = await prisma.alert.findMany({
-    where: { astronautId, status: { not: 'RESOLVED' } },
-    select: { id: true, severity: true, title: true, status: true, createdAt: true },
-    orderBy: { createdAt: 'desc' },
-    take: 8
-  });
-  return { openCount: open.length, highest: open[0]?.severity ?? null, items: open };
+const RANK = { CRITICAL: 4, WARNING: 3, WATCH: 2, INFO: 1 } as Record<string, number>;
+
+function summarize(open: Array<{ id: string; severity: string; title: string; status: string; createdAt: Date }>) {
+  const highest = [...open].sort((a, b) => (RANK[b.severity] ?? 0) - (RANK[a.severity] ?? 0))[0]?.severity ?? null;
+  return { openCount: open.length, highest, items: open.slice(0, 8) };
 }
 
 astronautsRouter.get('/', async (req, res, next) => {
@@ -38,15 +35,39 @@ astronautsRouter.get('/', async (req, res, next) => {
       orderBy: { callSign: 'asc' }
     });
 
-    const payload = [];
-    for (const profile of profiles) {
-      const summary = await alertSummary(profile.id);
-      if (req.user!.role === Role.GROUND_CREW || req.user!.role === Role.ADMIN) {
-        payload.push(operationalView(profile, summary));
-      } else {
-        payload.push({ ...medicalView(profile), alertSummary: summary });
-      }
+    const ids = profiles.map(profile => profile.id);
+    const [openAlerts, latestVitals] = await Promise.all([
+      prisma.alert.findMany({
+        where: { astronautId: { in: ids }, status: { not: 'RESOLVED' } },
+        select: { id: true, astronautId: true, severity: true, title: true, status: true, createdAt: true },
+        orderBy: { createdAt: 'desc' }
+      }),
+      prisma.vitalMeasurement.findMany({
+        where: { astronautId: { in: ids } },
+        orderBy: { measuredAt: 'desc' },
+        distinct: ['astronautId', 'type']
+      })
+    ]);
+    const alertsBy = new Map<string, typeof openAlerts>();
+    for (const alert of openAlerts) {
+      const list = alertsBy.get(alert.astronautId) ?? [];
+      list.push(alert);
+      alertsBy.set(alert.astronautId, list);
     }
+    const latestBy = new Map<string, typeof latestVitals>();
+    for (const vital of latestVitals) {
+      const list = latestBy.get(vital.astronautId) ?? [];
+      list.push(vital);
+      latestBy.set(vital.astronautId, list);
+    }
+
+    const payload = profiles.map(profile => {
+      const summary = summarize(alertsBy.get(profile.id) ?? []);
+      if (req.user!.role === Role.GROUND_CREW || req.user!.role === Role.ADMIN) {
+        return operationalView(profile, summary);
+      }
+      return { ...medicalView(profile), alertSummary: summary, latestVitals: latestBy.get(profile.id) ?? [] };
+    });
     res.json(payload);
   } catch (err) {
     next(err);
@@ -56,7 +77,13 @@ astronautsRouter.get('/', async (req, res, next) => {
 astronautsRouter.get('/:id', async (req, res, next) => {
   try {
     const { profile, scope } = await authorizeProfile(req.user!, req.params.id);
-    const summary = await alertSummary(profile.id);
+    const open = await prisma.alert.findMany({
+      where: { astronautId: profile.id, status: { not: 'RESOLVED' } },
+      select: { id: true, severity: true, title: true, status: true, createdAt: true },
+      orderBy: { createdAt: 'desc' },
+      take: 8
+    });
+    const summary = summarize(open);
     if (scope === 'medical') {
       const vitals = await prisma.vitalMeasurement.findMany({
         where: { astronautId: profile.id },

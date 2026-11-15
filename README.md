@@ -84,3 +84,5 @@ Messages are labeled as a simulation. There is no live link to Earth and no encr
 ## License
 
 MIT, with the medical disclaimer in `LICENSE`.
+
+Publishing this repository on GitHub is described in [docs/SETUP.md](docs/SETUP.md).

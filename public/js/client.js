@@ -257,25 +257,136 @@
     });
   }
 
+  function crewName(member) {
+    return member.identity?.firstName || member.callSign;
+  }
+
+  function healthBand(member) {
+    const highest = member.alertSummary?.highest;
+    if (highest === 'CRITICAL' || highest === 'WARNING') return 'critical';
+    if (highest === 'WATCH') return 'watch';
+    return 'stable';
+  }
+
+  function wireWardControls() {
+    ['wardSearch', 'wardFilter', 'wardSort'].forEach(id => {
+      const el = document.getElementById(id);
+      if (!el || el.dataset.wired) return;
+      el.dataset.wired = '1';
+      el.addEventListener('input', () => loadWard());
+      el.addEventListener('change', () => loadWard());
+    });
+  }
+
   async function loadWard() {
     const host = document.getElementById('wardBody');
-    if (!host) return;
-    host.innerHTML = state.crew.map(member => {
+    const stats = document.getElementById('wardStats');
+    if (!host || !stats) return;
+    wireWardControls();
+    const fr = currentLang === 'fr';
+    const filter = document.getElementById('wardFilter');
+    const sort = document.getElementById('wardSort');
+    const search = document.getElementById('wardSearch');
+    if (filter && filter.options.length >= 4) {
+      filter.options[0].text = fr ? 'Tous' : 'All';
+      filter.options[1].text = fr ? 'Stable' : 'Stable';
+      filter.options[2].text = fr ? 'Surveillance' : 'Watch';
+      filter.options[3].text = fr ? 'Critique' : 'Critical';
+    }
+    if (sort && sort.options.length >= 2) {
+      sort.options[0].text = fr ? 'Nom' : 'Name';
+      sort.options[1].text = fr ? 'Alerte' : 'Alert';
+    }
+    if (search) search.placeholder = fr ? 'Alex, Maya…' : 'Alex, Maya…';
+    const bands = { stable: 0, watch: 0, critical: 0 };
+    state.crew.forEach(member => { bands[healthBand(member)] += 1; });
+    const openAlerts = state.crew.reduce((sum, member) => sum + (member.alertSummary?.openCount || 0), 0);
+    const stat = (label, value, tone) => `<div class="rounded-2xl border border-slate-800 p-3"><div class="text-[10px] font-mono uppercase text-slate-400">${esc(label)}</div><div class="font-display text-2xl ${tone}">${value}</div></div>`;
+    stats.innerHTML = [
+      stat(fr ? 'Équipage' : 'Crew', state.crew.length, 'text-white'),
+      stat(fr ? 'Stables' : 'Stable', bands.stable, 'text-emerald-300'),
+      stat(fr ? 'Sous surveillance' : 'Watch', bands.watch, 'text-amber-300'),
+      stat(fr ? 'Alertes actives' : 'Active alerts', openAlerts, 'text-red-300')
+    ].join('');
+    const query = (search?.value || '').trim().toLowerCase();
+    const filterValue = filter?.value || 'all';
+    const sortValue = sort?.value || 'name';
+    const rank = { critical: 3, watch: 2, stable: 1 };
+    const rows = state.crew
+      .filter(member => {
+        const name = `${crewName(member)} ${member.callSign}`.toLowerCase();
+        if (query && !name.includes(query)) return false;
+        if (filterValue === 'all') return true;
+        return healthBand(member) === filterValue;
+      })
+      .sort((a, b) => sortValue === 'alert'
+        ? rank[healthBand(b)] - rank[healthBand(a)]
+        : crewName(a).localeCompare(crewName(b)));
+    host.innerHTML = rows.map(member => {
       const local = CALL_TO_LOCAL[member.callSign] || '';
-      const highest = member.alertSummary?.highest;
-      const tone = highest === 'CRITICAL' ? 'border-red-400/50' : highest === 'WARNING' || highest === 'WATCH' ? 'border-amber-400/40' : 'border-emerald-400/30';
-      return `<button type="button" data-local="${esc(local)}" class="text-left rounded-2xl border ${tone} bg-slate-950/50 p-4 hover:bg-slate-900">
-        <div class="font-display font-bold text-white">${esc(member.callSign)}</div>
-        <div class="text-xs text-slate-400 mt-1">${esc(member.mission?.name || '')}</div>
-        <div class="text-[11px] font-mono mt-2 text-slate-300">${esc(t('openAlerts'))}: ${esc(member.alertSummary?.openCount ?? 0)} · ${esc(statusLabel(highest) || '—')}</div>
-      </button>`;
-    }).join('');
-    host.querySelectorAll('[data-local]').forEach(button => {
+      const band = healthBand(member);
+      const tone = band === 'critical' ? 'border-red-400/50' : band === 'watch' ? 'border-amber-400/40' : 'border-emerald-400/30';
+      const latest = (member.latestVitals || [])[0];
+      const latestText = latest ? `${latest.type} ${latest.value} ${latest.unit}` : (fr ? 'Aucune mesure' : 'No measurement');
+      return `<article class="rounded-2xl border ${tone} bg-slate-950/50 p-4">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-full bg-sky-500/20 text-sky-200 font-display font-bold grid place-items-center">${esc(crewName(member).slice(0, 1))}</div>
+          <div>
+            <div class="font-display font-bold text-white">${esc(crewName(member))}</div>
+            <div class="text-[11px] font-mono text-slate-500">${esc(member.callSign)}</div>
+          </div>
+        </div>
+        <dl class="mt-3 text-xs text-slate-300 grid grid-cols-2 gap-y-1">
+          <div>${fr ? 'Âge' : 'Age'} ${esc(member.age ?? '—')}</div>
+          <div>${esc(statusLabel(member.alertSummary?.highest) || (fr ? 'Stable' : 'Stable'))}</div>
+          <div class="col-span-2">${esc(member.mission?.name || '')}</div>
+          <div class="col-span-2 font-mono text-[11px] text-slate-400">${esc(latestText)}</div>
+        </dl>
+        <button type="button" data-id="${esc(member.id)}" data-local="${esc(local)}" class="mt-3 text-xs font-display font-bold text-sky-300">${fr ? 'Voir le profil' : 'View profile'}</button>
+      </article>`;
+    }).join('') || `<p class="text-sm text-slate-400">${fr ? 'Aucun astronaute pour ce filtre.' : 'No astronaut matches this filter.'}</p>`;
+    host.querySelectorAll('[data-id]').forEach(button => {
+      button.addEventListener('click', () => openProfile(button.dataset.id, button.dataset.local));
+    });
+  }
+
+  async function openProfile(id, local) {
+    if (local) selectAstronaut(local);
+    const panel = document.getElementById('wardProfile');
+    const fr = currentLang === 'fr';
+    panel.classList.remove('hidden');
+    panel.innerHTML = `<p class="text-sm text-slate-400">${fr ? 'Chargement du dossier fictif…' : 'Loading the fictional record…'}</p>`;
+    const [record, planWrap] = await Promise.all([
+      api(`/api/astronauts/${id}`),
+      api(`/api/nutrition/recommendations/${id}?lang=${fr ? 'fr' : 'en'}`)
+    ]);
+    const plan = planWrap.recommendation;
+    const tabs = {
+      general: `<p>${esc(record.identity.firstName)} ${esc(record.identity.lastName)} · ${esc(record.callSign)}</p>
+        <p class="mt-1">${fr ? 'Âge' : 'Age'} ${esc(record.age ?? '—')} · ${esc(record.mission?.name || '')} · ${fr ? 'jour' : 'day'} ${esc(record.missionDay ?? '—')}</p>
+        <p class="mt-1">${record.heightCm ?? '—'} cm · ${record.weightKg ?? '—'} kg</p>
+        <p class="mt-1">${fr ? 'Allergies' : 'Allergies'}: ${esc((record.allergies || []).join(', ') || '—')}</p>
+        <p class="text-[11px] text-amber-200 mt-2">${fr ? 'Dossier fictif.' : 'Fictional record.'}</p>`,
+      health: (record.vitals || []).slice(0, 12).map(v => `<div class="font-mono text-xs">${esc(v.type)} ${esc(v.value)} ${esc(v.unit)}</div>`).join('') || '—',
+      history: `<div class="text-xs">${(record.notes || []).map(n => `<p class="mb-2">${esc(n.content)}</p>`).join('') || (fr ? 'Aucune note.' : 'No notes.')}</div>`,
+      nutrition: `<p>${esc(plan.energy.estimatedDailyKcal ?? '—')} kcal</p>
+        <p>P ${esc(plan.macros.proteinG.target ?? '—')} g · C ${esc(plan.macros.carbsG.target ?? '—')} g · F ${esc(plan.macros.fatG.target ?? '—')} g</p>
+        <p>${esc(plan.hydration.targetMl ?? '—')} mL</p>
+        <ul class="mt-2 list-disc pl-4">${(plan.priorities || []).slice(0, 4).map(item => `<li>${esc(item)}</li>`).join('')}</ul>`,
+      analysis: (record.alertSummary?.items || []).map(item => `<p class="text-xs mb-2">${esc(item.title)}</p>`).join('') || (fr ? 'Aucune alerte ouverte.' : 'No open alert.')
+    };
+    const labels = fr
+      ? [['general', 'Général'], ['health', 'Santé'], ['history', 'Historique'], ['nutrition', 'Nutrition'], ['analysis', 'Analyse']]
+      : [['general', 'General'], ['health', 'Health'], ['history', 'History'], ['nutrition', 'Nutrition'], ['analysis', 'Analysis']];
+    panel.innerHTML = `<div class="flex flex-wrap gap-2" id="profileTabs">${labels.map(([key, label], index) => `<button type="button" data-tab="${key}" class="px-3 py-1 rounded-full text-xs border ${index === 0 ? 'border-sky-400 text-sky-200' : 'border-slate-700 text-slate-300'}">${label}</button>`).join('')}</div><div id="profilePane" class="mt-3 text-sm text-slate-200">${tabs.general}</div>
+      <button type="button" id="openBodyMap" class="mt-3 text-xs text-sky-300">${fr ? 'Carte anatomique' : 'Body map'}</button>`;
+    panel.querySelectorAll('[data-tab]').forEach(button => {
       button.addEventListener('click', () => {
-        if (button.dataset.local) selectAstronaut(button.dataset.local);
-        switchView('crew');
+        document.getElementById('profilePane').innerHTML = tabs[button.dataset.tab];
       });
     });
+    document.getElementById('openBodyMap').addEventListener('click', () => switchView('crew'));
+    panel.scrollIntoView({ block: 'nearest' });
   }
 
   window.onGravityView = function (view) {
