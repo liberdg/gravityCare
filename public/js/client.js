@@ -85,11 +85,7 @@
       const name = tab.id.replace('tab-', '');
       const row = rows.find(item => item[0] === name);
       tab.classList.toggle('hidden', !allowed.has(name));
-      if (row) {
-        const label = tab.querySelector('[data-nav-label]');
-        if (label) label.textContent = t(row[1]);
-        else tab.textContent = t(row[1]);
-      }
+      if (row) tab.textContent = t(row[1]);
     });
     const role = document.getElementById('sessionRole');
     if (role && state.user) role.textContent = t(ROLE_KEY[state.user.role] || '');
