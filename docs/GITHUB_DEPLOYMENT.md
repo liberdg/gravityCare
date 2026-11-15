@@ -1,5 +1,7 @@
 # GravityCare — Ubuntu, lancement et GitHub
 
+Lien public : https://brain-belts-restored-generous.trycloudflare.com
+
 Le frontend et l’API sont le même serveur : `http://localhost:3001`. Le dossier `frontend/` n’est pas utilisé.
 
 ## 1. Extraire
