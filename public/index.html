@@ -2232,9 +2232,78 @@
     }
 
     // --- SCENARIO CONTROLLER ---
+    let alertBeepTimer = null;
+    const alertSources = { scenario: false, records: false };
+
+    function playAlertBeep() {
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      if (!Ctx) return;
+      if (!playAlertBeep.ctx) playAlertBeep.ctx = new Ctx();
+      const ctx = playAlertBeep.ctx;
+      const tone = () => {
+        const now = ctx.currentTime;
+        const master = ctx.createGain();
+        master.gain.value = 1;
+        master.connect(ctx.destination);
+        [0, 0.18, 0.36, 0.54].forEach((offset, index) => {
+          const osc = ctx.createOscillator();
+          const harmonic = ctx.createOscillator();
+          const gain = ctx.createGain();
+          const freq = index % 2 === 0 ? 980 : 1560;
+          osc.type = 'square';
+          harmonic.type = 'square';
+          osc.frequency.setValueAtTime(freq, now + offset);
+          harmonic.frequency.setValueAtTime(freq * 2, now + offset);
+          gain.gain.setValueAtTime(0.0001, now + offset);
+          gain.gain.exponentialRampToValueAtTime(1, now + offset + 0.008);
+          gain.gain.setValueAtTime(1, now + offset + 0.12);
+          gain.gain.exponentialRampToValueAtTime(0.0001, now + offset + 0.16);
+          osc.connect(gain);
+          harmonic.connect(gain);
+          gain.connect(master);
+          osc.start(now + offset);
+          harmonic.start(now + offset);
+          osc.stop(now + offset + 0.17);
+          harmonic.stop(now + offset + 0.17);
+        });
+      };
+      if (ctx.state === 'suspended') ctx.resume().then(tone).catch(() => {});
+      else tone();
+    }
+
+    function refreshAlertBeep() {
+      const active = alertSources.scenario || alertSources.records;
+      if (!active) {
+        if (alertBeepTimer) {
+          clearInterval(alertBeepTimer);
+          alertBeepTimer = null;
+        }
+        return;
+      }
+      if (alertBeepTimer) return;
+      playAlertBeep();
+      alertBeepTimer = setInterval(playAlertBeep, 1100);
+    }
+
+    window.gcSetRecordAlert = function (active) {
+      const next = Boolean(active);
+      if (alertSources.records === next) return;
+      alertSources.records = next;
+      refreshAlertBeep();
+    };
+
+    document.addEventListener('pointerdown', () => {
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      if (!Ctx) return;
+      if (!playAlertBeep.ctx) playAlertBeep.ctx = new Ctx();
+      if (playAlertBeep.ctx.state === 'suspended') playAlertBeep.ctx.resume().catch(() => {});
+    }, { passive: true });
+
     function setScenario(scenarioKey) {
       currentScenario = scenarioKey;
       protocolSeconds = 0;
+      alertSources.scenario = scenarioKey !== 'nominal';
+      refreshAlertBeep();
 
       document.querySelectorAll('.sim-btn').forEach(btn => {
         btn.classList.remove('ring-2', 'ring-white', 'scale-[1.02]');

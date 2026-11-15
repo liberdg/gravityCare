@@ -27,6 +27,7 @@
     crew: [],
     contacts: []
   };
+  let alertWatch = null;
 
   function headers() {
     return { Authorization: `Bearer ${state.token}`, 'Content-Type': 'application/json' };
@@ -69,6 +70,11 @@
     sessionStorage.removeItem(TOKEN_KEY);
     state.token = null;
     state.user = null;
+    if (alertWatch) {
+      clearInterval(alertWatch);
+      alertWatch = null;
+    }
+    if (typeof window.gcSetRecordAlert === 'function') window.gcSetRecordAlert(false);
     showLogin();
   }
 
@@ -97,7 +103,7 @@
   function applyRole() {
     labelNav();
     const localIds = state.crew.map(member => CALL_TO_LOCAL[member.callSign]).filter(Boolean);
-    window.GC_ALLOWED_LOCAL_IDS = state.user.role === 'ASTRONAUT' && localIds.length ? localIds : null;
+    window.GC_ALLOWED_LOCAL_IDS = null;
     if (state.user.role === 'ASTRONAUT' && localIds.length && !localIds.includes(currentAstroId)) {
       selectAstronaut(localIds[0]);
     } else if (typeof renderTopCrewPills === 'function') {
@@ -141,8 +147,15 @@
   async function loadNutrition() {
     const body = document.getElementById('nutritionBody');
     const form = document.getElementById('reviewForm');
-    const profile = currentProfile();
-    if (!profile) { body.textContent = t('noRecord'); return; }
+    const matched = state.crew.find(member => CALL_TO_LOCAL[member.callSign] === currentAstroId);
+    const profile = matched || (state.user.role === 'ASTRONAUT' ? null : currentProfile());
+    if (!profile) {
+      body.textContent = currentLang === 'fr'
+        ? 'Le plan nutritionnel s’ouvre sur votre propre profil. Revenez sur votre nom dans l’équipage.'
+        : 'The nutrition plan opens on your own profile. Select your name in the crew list.';
+      form.classList.add('hidden');
+      return;
+    }
     const data = await api(`/api/nutrition/recommendations/${profile.id}?lang=${currentLang === 'fr' ? 'fr' : 'en'}`);
     const plan = data.recommendation;
     const slots = currentLang === 'fr'
@@ -190,9 +203,28 @@
     return table[code] || code;
   }
 
+  function alertIsHot(alert) {
+    return alert.status !== 'RESOLVED' && (alert.severity === 'WARNING' || alert.severity === 'CRITICAL');
+  }
+
+  async function watchAlerts() {
+    if (!state.token) return;
+    try {
+      const alerts = await api('/api/alerts');
+      if (typeof window.gcSetRecordAlert === 'function') {
+        window.gcSetRecordAlert(alerts.some(alertIsHot));
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  }
+
   async function loadAlerts() {
     const lang = currentLang === 'fr' ? 'fr' : 'en';
     const alerts = await api(`/api/alerts?lang=${lang}`);
+    if (typeof window.gcSetRecordAlert === 'function') {
+      window.gcSetRecordAlert(alerts.some(alertIsHot));
+    }
     const host = document.getElementById('alertsBody');
     if (!alerts.length) {
       host.innerHTML = `<p class="text-slate-400">${esc(t('noAlerts'))}</p>`;
@@ -417,6 +449,9 @@
     document.getElementById('loginError').classList.add('hidden');
     await loadCrew();
     applyRole();
+    await watchAlerts();
+    if (alertWatch) clearInterval(alertWatch);
+    alertWatch = setInterval(watchAlerts, 8000);
   }
 
   document.querySelectorAll('.demo-login').forEach(button => {
