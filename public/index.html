@@ -216,6 +216,9 @@
             <button onclick="switchView('cockpit')" id="tab-cockpit" class="nav-tab px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-display font-semibold transition-all bg-sky-500/20 text-sky-300 border border-sky-400/40 whitespace-nowrap">
               Dashboard
             </button>
+            <button onclick="switchView('copilot')" id="tab-copilot" class="nav-tab px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-display font-semibold transition-all text-slate-400 hover:text-white border border-transparent whitespace-nowrap flex items-center gap-1.5">
+              <span class="text-sky-400">✦</span><span>Copilot</span>
+            </button>
             <button onclick="switchView('crew')" id="tab-crew" class="nav-tab px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-display font-semibold transition-all text-slate-400 hover:text-white border border-transparent whitespace-nowrap flex items-center gap-1.5">
               <span class="w-2 h-2 rounded-full bg-sky-400"></span>
               <span data-i18n="navCrew">2. Astronaut Profiles (4)</span>
@@ -631,20 +634,6 @@
             </div>
             <!-- Structured Biomarker Output -->
             <div id="symptomParsedOutput" class="hidden p-2.5 rounded-xl bg-sky-950/45 border border-sky-500/35 text-[11px] font-mono text-sky-200"></div>
-            <div class="mt-3 p-3 rounded-xl bg-slate-950/75 border border-slate-700/80">
-              <div class="flex items-center justify-between mb-2">
-                <span class="text-[10px] font-mono uppercase tracking-wider text-sky-300 font-semibold">GravityCare AI Conversation</span>
-                <span class="text-[9px] font-mono text-slate-500">OpenAI • Demo</span>
-              </div>
-              <div id="copilotConversation" class="space-y-2 max-h-48 overflow-y-auto mb-2" aria-live="polite">
-                <p class="text-[11px] text-slate-400">Ask about the selected astronaut's simulated readings, symptoms, alerts, or mission health protocols.</p>
-              </div>
-              <div class="flex gap-2">
-                <input id="copilotChatInput" type="text" maxlength="1800" class="min-w-0 flex-1 bg-slate-900 border border-slate-700 focus:border-sky-400 rounded-lg px-3 py-2 text-xs text-white outline-none" placeholder="Ask GravityCare Copilot..." />
-                <button id="copilotSendBtn" type="button" onclick="sendCopilotMessage()" class="px-3 py-2 rounded-lg bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-xs">Send</button>
-              </div>
-              <p class="mt-2 text-[9px] text-slate-500">Fictional demonstration only. Not a medical diagnosis or emergency service.</p>
-            </div>
           </div>
         </div>
       </div>
@@ -1028,6 +1017,48 @@
         <p class="text-[10px] font-mono uppercase tracking-widest text-slate-300" data-i18n="adminEyebrow">Administration</p>
         <h2 class="font-display font-bold text-xl text-white mt-1" data-i18n="adminTitle">Accounts and access log</h2>
         <div id="adminBody" class="mt-4 text-sm"></div>
+      </div>
+    </section>
+
+    <section id="view-copilot" class="hidden space-y-4 pb-6">
+      <div class="glass-card rounded-2xl p-4 sm:p-6 border border-sky-500/20">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
+          <div>
+            <p class="text-[10px] font-mono uppercase tracking-widest text-sky-300">GRAVITYCARE INTELLIGENCE</p>
+            <h2 class="font-display font-bold text-2xl text-white mt-1">Clinical Copilot</h2>
+            <p class="text-xs text-slate-400 mt-1">Assistant conversationnel et analyse des données physiologiques simulées.</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+            <span class="text-[10px] font-mono text-emerald-300">AI ASSISTANT</span>
+          </div>
+        </div>
+        <div class="grid grid-cols-1 xl:grid-cols-3 gap-4">
+          <aside class="xl:col-span-1 rounded-xl bg-slate-950/70 border border-slate-800 p-4">
+            <h3 class="text-sm font-display font-bold text-white">Astronaut context</h3>
+            <p class="text-[11px] text-slate-400 mt-1">The selected cockpit profile and its simulated telemetry are attached to each request.</p>
+            <div class="mt-3 space-y-2 text-xs">
+              <div class="flex justify-between gap-2"><span class="text-slate-500">Selected crew</span><strong id="copilotCrewName" class="text-slate-200">—</strong></div>
+              <div class="flex justify-between gap-2"><span class="text-slate-500">Mission scenario</span><strong id="copilotScenario" class="text-slate-200">—</strong></div>
+              <div class="flex justify-between gap-2"><span class="text-slate-500">Language</span><strong id="copilotLanguage" class="text-slate-200">—</strong></div>
+            </div>
+            <button type="button" onclick="runCopilotHealthAnalysis()" class="w-full mt-4 rounded-lg bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-xs px-3 py-2.5">Analyze selected astronaut</button>
+            <p class="text-[10px] text-slate-500 mt-3">Fictional demo only. Not a medical device, diagnosis, or emergency service.</p>
+          </aside>
+          <div class="xl:col-span-2 rounded-xl bg-slate-950/70 border border-slate-800 p-3 sm:p-4 flex flex-col min-h-[470px]">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-3">
+              <div><h3 class="text-sm font-display font-bold text-white">Conversation</h3><p class="text-[10px] text-slate-500">Ask questions in French or English</p></div>
+              <button type="button" onclick="clearCopilotConversation()" class="text-[10px] text-slate-400 hover:text-white border border-slate-700 rounded-lg px-2.5 py-1.5">New conversation</button>
+            </div>
+            <div id="copilotConversation" class="space-y-3 flex-1 overflow-y-auto max-h-[420px] pr-1" aria-live="polite">
+              <div class="rounded-xl bg-sky-950/50 border border-sky-500/20 p-3 text-xs text-slate-200">Bonjour ! Je suis le GravityCare Copilot. Je peux discuter des données simulées de l'astronaute sélectionné et aider à structurer leur analyse. Que souhaites-tu examiner ?</div>
+            </div>
+            <div class="flex gap-2 mt-3">
+              <input id="copilotChatInput" type="text" maxlength="1800" class="min-w-0 flex-1 bg-slate-900 border border-slate-700 focus:border-sky-400 rounded-lg px-3 py-3 text-sm text-white outline-none" placeholder="Pose ta question au Copilot..." />
+              <button id="copilotSendBtn" type="button" onclick="sendCopilotMessage()" class="px-4 py-3 rounded-lg bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-xs">Envoyer</button>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
 
@@ -2221,7 +2252,7 @@
     // --- VIEW SWITCHER ---
     function switchView(viewName) {
       currentView = viewName;
-      ['cockpit', 'crew', 'emergency', 'dualuse', 'ward', 'nutrition', 'alerts', 'messages', 'ground', 'admin'].forEach(v => {
+      ['cockpit', 'copilot', 'crew', 'emergency', 'dualuse', 'ward', 'nutrition', 'alerts', 'messages', 'ground', 'admin'].forEach(v => {
         const view = document.getElementById(`view-${v}`);
         if (view) view.classList.add('hidden');
         const tab = document.getElementById(`tab-${v}`);
@@ -2241,6 +2272,8 @@
 
       if (viewName === 'cockpit') {
         resizeCanvas();
+      } else if (viewName === 'copilot') {
+        refreshCopilotContext();
       } else if (viewName === 'crew') {
         renderCrewDossierView();
       }
@@ -2609,7 +2642,32 @@
       panel.scrollTop = panel.scrollHeight;
     }
 
-    async function sendCopilotMessage() {
+    function refreshCopilotContext() {
+      const astro = astronauts[currentAstroId] || {};
+      const crew = document.getElementById('copilotCrewName');
+      const scenario = document.getElementById('copilotScenario');
+      const language = document.getElementById('copilotLanguage');
+      if (crew) crew.textContent = astro.fullName || astro.shortName || currentAstroId;
+      if (scenario) scenario.textContent = currentScenario;
+      if (language) language.textContent = currentLang.toUpperCase();
+    }
+
+    function clearCopilotConversation() {
+      copilotHistory = [];
+      const panel = document.getElementById('copilotConversation');
+      if (panel) panel.innerHTML = '<div class="rounded-xl bg-sky-950/50 border border-sky-500/20 p-3 text-xs text-slate-200">Nouvelle conversation. Comment puis-je t’aider ?</div>';
+    }
+
+    async function runCopilotHealthAnalysis() {
+      const prompt = currentLang === 'fr'
+        ? "Analyse les constantes vitales simulées de l'astronaute sélectionné. Distingue les observations, les informations manquantes, les points à surveiller et les situations qui nécessitent une escalade vers le médecin de vol."
+        : "Analyze the selected astronaut's simulated vital signs. Distinguish observations, missing information, monitoring points, and situations requiring escalation to the flight surgeon.";
+      const input = document.getElementById('copilotChatInput');
+      if (input) input.value = prompt;
+      await sendCopilotMessage('analysis');
+    }
+
+    async function sendCopilotMessage(mode = 'chat') {
       const input = document.getElementById('copilotChatInput');
       const button = document.getElementById('copilotSendBtn');
       const message = input.value.trim();
@@ -2620,7 +2678,7 @@
       copilotHistory.push({ role: 'user', content: message });
       appendCopilotMessage('user', message);
       try {
-        const answer = await callGravityCareCopilot('chat', message, copilotHistory.slice(0, -1));
+        const answer = await callGravityCareCopilot(mode, message, copilotHistory.slice(0, -1));
         copilotHistory.push({ role: 'assistant', content: answer });
         copilotHistory = copilotHistory.slice(-8);
         appendCopilotMessage('assistant', answer);
