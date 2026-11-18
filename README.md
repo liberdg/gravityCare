@@ -1,6 +1,6 @@
 # GravityCare — Orbital Medical OS
 
-Public demo: https://brain-belts-restored-generous.trycloudflare.com
+Public demo: https://gravitycare.onrender.com/
 
 Password for every demo account: `demo1234`. This address stays online while the demo computer is running.
 
