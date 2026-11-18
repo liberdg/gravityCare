@@ -11,6 +11,7 @@ import { messagesRouter } from './messages/messages.routes.js';
 import { adminRouter } from './admin/admin.routes.js';
 import { reportsRouter } from './reports/reports.routes.js';
 import { demoRouter } from './demo/demo.routes.js';
+import { copilotRouter } from './copilot/copilot.routes.js';
 import { errorHandler } from './common/errorHandler.js';
 import { authMiddleware } from './auth/auth.middleware.js';
 
@@ -35,6 +36,8 @@ export function createApp() {
   });
 
   app.use('/api/auth', authRouter);
+  // Public demo Copilot: accepts only the synthetic snapshot rendered by the demo UI.
+  app.use('/api/copilot', copilotRouter);
   app.use('/api/astronauts', authMiddleware, astronautsRouter);
   app.use('/api/vitals', authMiddleware, vitalsRouter);
   app.use('/api/nutrition', authMiddleware, nutritionRouter);
