@@ -306,8 +306,8 @@
         return `<article class="rounded-2xl border border-slate-800 bg-slate-950/65 p-4 hover:border-sky-400/30 transition-colors">
           <div class="flex items-start justify-between gap-3">
             <div class="flex items-center gap-3 min-w-0">
-              <div class="h-11 w-11 shrink-0 rounded-xl border border-sky-400/25 bg-sky-500/10 grid place-items-center font-display font-bold text-sky-200">${esc(String(member.callSign || '—').split(/[^A-Za-z0-9]/).filter(Boolean).map(part => part[0]).join('').slice(0,2) || 'CR')}</div>
-              <div class="min-w-0"><h3 class="font-display font-bold text-white truncate">${esc(member.callSign)}</h3><p class="text-[10px] font-mono text-slate-500">${esc(member.agency || '—')} · ${esc(missionCode)}</p></div>
+              <div class="h-11 w-11 shrink-0 rounded-xl border border-sky-400/25 bg-sky-500/10 grid place-items-center font-display font-bold text-sky-200">${esc(String(member.crewName || member.callSign || '—').trim().slice(0,2).toUpperCase())}</div>
+              <div class="min-w-0"><h3 class="font-display font-bold text-white truncate">${esc(member.crewName || member.callSign)}</h3><p class="text-[10px] font-mono text-slate-500">${esc(member.agency || '—')} · ${esc(missionCode)}</p></div>
             </div>
             <span class="shrink-0 rounded-full border px-2 py-1 text-[9px] font-mono uppercase ${meta.cls}"><span class="inline-block h-1.5 w-1.5 rounded-full ${meta.dot} mr-1"></span>${esc(meta.label)}</span>
           </div>
@@ -324,7 +324,7 @@
         const date = alert.createdAt ? new Date(alert.createdAt).toLocaleString(fr ? 'fr-FR' : 'en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : '—';
         return `<article class="grid grid-cols-[auto_1fr] sm:grid-cols-[auto_1fr_auto] items-start gap-3 rounded-xl border ${color} p-3">
           <span class="mt-1 h-2.5 w-2.5 rounded-full ${alert.severity === 'CRITICAL' ? 'bg-red-400' : alert.severity === 'WARNING' ? 'bg-orange-400' : alert.severity === 'WATCH' ? 'bg-amber-400' : 'bg-sky-400'}"></span>
-          <div class="min-w-0"><div class="flex flex-wrap items-center gap-2"><strong class="text-xs text-white">${esc(alert.callSign || (fr ? 'Équipage' : 'Crew'))}</strong><span class="text-[9px] font-mono uppercase">${esc(statusLabel(alert.severity))}</span></div><p class="text-xs text-slate-300 mt-1">${esc(alert.title)}</p><p class="text-[10px] text-slate-500 mt-1">${esc(statusLabel(alert.status))}</p></div>
+          <div class="min-w-0"><div class="flex flex-wrap items-center gap-2"><strong class="text-xs text-white">${esc(alert.crewName || alert.callSign || (fr ? 'Équipage' : 'Crew'))}</strong><span class="text-[9px] font-mono uppercase">${esc(statusLabel(alert.severity))}</span></div><p class="text-xs text-slate-300 mt-1">${esc(alert.title)}</p><p class="text-[10px] text-slate-500 mt-1">${esc(statusLabel(alert.status))}</p></div>
           <time class="col-span-2 sm:col-span-1 text-[10px] font-mono text-slate-500 sm:text-right">${esc(date)}</time>
         </article>`;
       }).join('');
@@ -338,7 +338,7 @@
         <section class="glass-card rounded-2xl p-4 sm:p-5">
           <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-3 mb-4">
             <div><p class="text-[10px] font-mono uppercase tracking-widest text-sky-300">${fr ? 'ÉTAT DE L’ÉQUIPAGE' : 'CREW STATUS'}</p><h3 class="font-display text-lg font-bold text-white mt-1">${fr ? 'Vue opérationnelle des astronautes' : 'Astronaut operational overview'}</h3><p class="text-[11px] text-slate-500 mt-1">${fr ? 'Identifiant de mission, jour de mission et niveau d’alerte uniquement.' : 'Mission identifier, mission day and alert level only.'}</p></div>
-            <label class="text-[10px] font-mono text-slate-400">${fr ? 'RECHERCHER' : 'SEARCH'}<input id="groundCrewSearch" type="search" placeholder="${fr ? 'Rechercher un indicatif…' : 'Search call sign…'}" class="block mt-1 w-full sm:w-56 rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-white outline-none focus:border-sky-400"></label>
+            <label class="text-[10px] font-mono text-slate-400">${fr ? 'RECHERCHER' : 'SEARCH'}<input id="groundCrewSearch" type="search" placeholder="${fr ? 'Rechercher un astronaute…' : 'Search astronaut…'}" class="block mt-1 w-full sm:w-56 rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-white outline-none focus:border-sky-400"></label>
           </div>
           <div id="groundCrewGrid" class="grid md:grid-cols-2 xl:grid-cols-4 gap-3">${crewCards || `<p class="text-sm text-slate-400">${fr ? 'Aucun membre d’équipage.' : 'No crew members.'}</p>`}</div>
         </section>
