@@ -32,35 +32,42 @@ function allowRequest(req: Request): boolean {
   return true;
 }
 
-function extractOutput(payload: any): string {
-  if (typeof payload?.output_text === 'string') return payload.output_text.trim();
-  const chunks: string[] = [];
-  for (const item of payload?.output ?? []) {
-    for (const part of item?.content ?? []) {
-      if (part?.type === 'output_text' && typeof part.text === 'string') chunks.push(part.text);
-    }
-  }
-  return chunks.join('\n').trim();
+function extractGeminiText(payload: any): string {
+  const parts = payload?.candidates?.[0]?.content?.parts ?? [];
+  return parts
+    .filter((part: any) => typeof part?.text === 'string')
+    .map((part: any) => part.text)
+    .join('\n')
+    .trim();
+}
+
+function getProviderError(payload: any): string {
+  return String(payload?.error?.message || payload?.error?.status || '').toLowerCase();
 }
 
 copilotRouter.post('/chat', async (req: Request, res: Response) => {
   if (!allowRequest(req)) {
     res.setHeader('Retry-After', '60');
-    res.status(429).json({ error: 'Too many Copilot requests. Please wait one minute.' });
+    res.status(429).json({ error: 'Trop de demandes Copilot. Attends une minute avant de réessayer.' });
     return;
   }
 
   const parsed = requestSchema.safeParse(req.body);
   if (!parsed.success) {
-    res.status(400).json({ error: 'Invalid Copilot request.', details: parsed.error.flatten() });
+    res.status(400).json({ error: 'Demande Copilot invalide.', details: parsed.error.flatten() });
     return;
   }
 
   const apiKey = process.env.AI_API_KEY;
-  const baseUrl = (process.env.AI_BASE_URL || 'https://api.openai.com/v1').replace(/\/+$/, '');
-  const model = process.env.AI_MODEL || 'gpt-4o-mini';
+  const provider = (process.env.AI_PROVIDER || 'gemini').toLowerCase();
+  const model = process.env.AI_MODEL || 'gemini-3.8-flash';
+
   if (!apiKey) {
-    res.status(503).json({ error: 'Copilot AI is not configured. Add AI_API_KEY in Render Environment.' });
+    res.status(503).json({ error: 'Copilot IA non configuré. Ajoute AI_API_KEY dans les variables d’environnement de Render.' });
+    return;
+  }
+  if (provider !== 'gemini') {
+    res.status(503).json({ error: 'Fournisseur IA non pris en charge par cette version. Configure AI_PROVIDER=gemini dans Render.' });
     return;
   }
 
@@ -77,63 +84,75 @@ copilotRouter.post('/chat', async (req: Request, res: Response) => {
       : 'Have a natural multi-turn conversation. Use the recent conversation history when relevant and relate answers to the supplied astronaut snapshot.'
   ].join('\n');
 
-  const input = [
-    ...history.map(item => ({ role: item.role, content: item.content })),
+  const contents = [
+    ...history.map(item => ({
+      role: item.role === 'assistant' ? 'model' : 'user',
+      parts: [{ text: item.content }]
+    })),
     {
       role: 'user',
-      content: JSON.stringify({
-        request: message,
-        astronaut_snapshot: context,
-        note: 'This is a fictional demonstration snapshot, not a verified medical record.'
-      })
+      parts: [{
+        text: JSON.stringify({
+          request: message,
+          astronaut_snapshot: context,
+          note: 'This is a fictional demonstration snapshot, not a verified medical record.'
+        })
+      }]
     }
   ];
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 30_000);
   try {
-    const upstream = await fetch(`${baseUrl}/responses`, {
+    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`;
+    const upstream = await fetch(endpoint, {
       method: 'POST',
       signal: controller.signal,
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ model, instructions, input, store: false, max_output_tokens: 700 })
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: instructions }] },
+        contents,
+        generationConfig: { maxOutputTokens: 700, temperature: 0.4 }
+      })
     });
 
+    const payload: any = await upstream.json().catch(() => ({}));
     if (!upstream.ok) {
-      const detail = await upstream.text();
-      let providerError: any = {};
-      try { providerError = JSON.parse(detail)?.error ?? {}; } catch { /* provider returned non-JSON */ }
-      const providerCode = String(providerError.code || providerError.type || '').toLowerCase();
-      console.error('[copilot] OpenAI request failed:', upstream.status, providerCode, detail.slice(0, 500));
+      const providerMessage = getProviderError(payload);
+      console.error('[copilot] Gemini request failed:', upstream.status, providerMessage.slice(0, 300));
 
-      if (upstream.status === 401) {
-        res.status(502).json({ error: 'Clé API OpenAI refusée. Vérifie AI_API_KEY dans Render.' });
-      } else if (upstream.status === 429 && (providerCode.includes('insufficient_quota') || providerCode.includes('credit_balance_exhausted') || providerCode.includes('spend_limit_exceeded') || providerCode.includes('usage_limit_exceeded') || providerCode.includes('billing') || providerCode.includes('quota'))) {
-        res.status(503).json({ error: 'Crédit API OpenAI épuisé ou budget mensuel atteint. Ajoute un moyen de paiement ou augmente le budget sur OpenAI Platform > Billing, puis réessaie.' });
+      if (upstream.status === 400 || upstream.status === 403) {
+        res.status(502).json({ error: 'La clé Gemini ou le modèle est refusé. Vérifie AI_API_KEY et AI_MODEL dans Render.' });
       } else if (upstream.status === 429) {
         res.setHeader('Retry-After', '30');
-        res.status(429).json({ error: 'Limite temporaire de requêtes OpenAI atteinte. Attends 30 secondes puis réessaie.' });
-      } else if (upstream.status === 404 || providerCode.includes('model_not_found')) {
-        res.status(502).json({ error: 'Modèle OpenAI indisponible pour cette clé. Vérifie AI_MODEL dans Render.' });
+        const quota = /quota|resource_exhausted|billing|limit:\s*0/.test(providerMessage);
+        res.status(quota ? 503 : 429).json({
+          error: quota
+            ? 'Le quota gratuit Gemini est atteint pour le moment. Consulte les limites du projet dans Google AI Studio, puis réessaie lorsque le quota sera réinitialisé.'
+            : 'Gemini reçoit trop de demandes. Attends 30 secondes puis réessaie.'
+        });
+      } else if (upstream.status === 404) {
+        res.status(502).json({ error: 'Modèle Gemini introuvable. Vérifie le nom indiqué dans AI_MODEL sur Render.' });
       } else {
-        res.status(502).json({ error: 'Le fournisseur IA n’a pas pu traiter la demande. Consulte les journaux Render pour le détail.' });
+        res.status(502).json({ error: 'Gemini n’a pas pu traiter la demande. Consulte les journaux Render pour le détail.' });
       }
       return;
     }
 
-    const payload = await upstream.json();
-    const answer = extractOutput(payload);
+    const answer = extractGeminiText(payload);
     if (!answer) {
-      res.status(502).json({ error: 'The AI provider returned an empty response.' });
+      const reason = String(payload?.candidates?.[0]?.finishReason || '');
+      res.status(502).json({
+        error: reason === 'SAFETY'
+          ? 'Gemini a bloqué cette demande pour des raisons de sécurité. Reformule ta question.'
+          : 'Gemini a renvoyé une réponse vide. Réessaie avec une demande plus courte.'
+      });
       return;
     }
-    res.json({ answer, mode, model, provider: 'openai', disclaimer: 'Fictional demo only — not a medical diagnosis.' });
+    res.json({ answer, mode, model, provider: 'gemini', disclaimer: 'Démonstration fictive uniquement — ne constitue pas un diagnostic médical.' });
   } catch (error) {
-    console.error('[copilot] Request error:', error);
-    res.status(502).json({ error: 'Unable to reach the AI provider. Check network access and Render logs.' });
+    console.error('[copilot] Gemini connection error:', error instanceof Error ? error.message : 'unknown error');
+    res.status(502).json({ error: 'Impossible de joindre Gemini. Vérifie la connexion réseau et les journaux Render.' });
   } finally {
     clearTimeout(timeout);
   }
