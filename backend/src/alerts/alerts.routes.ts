@@ -49,6 +49,7 @@ alertsRouter.get('/', async (req, res, next) => {
       return {
         id: alert.id,
         astronautId: alert.astronautId,
+        crewName: alert.astronaut.user.firstName,
         callSign: alert.astronaut.callSign,
         type: alert.type,
         severity: alert.severity,
