@@ -1,8 +1,10 @@
 # GravityCare — Orbital Medical OS
 
-Public demo: https://brain-belts-restored-generous.trycloudflare.com
+## Public demo
 
-Password for every demo account: `demo1234`. This address stays online while the demo computer is running.
+**Live application:** https://gravitycare.onrender.com/
+
+Demo password for every account: `demo1234`.
 
 Fictional health-monitoring prototype for the NASA Space Apps Challenge. It follows one crewmember at a time: profile, measurements, nutrition, alerts, a written analysis, and a simulated physician channel.
 
