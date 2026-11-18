@@ -117,6 +117,8 @@
 
   async function loadCrew() {
     state.crew = await api('/api/astronauts');
+    window.GC_MEDICAL_CREW = state.crew;
+    window.GC_FETCH_VITALS = astronautId => api(`/api/vitals/astronaut/${encodeURIComponent(astronautId)}?limit=100`);
     const select = document.getElementById('messageReceiver');
     select.innerHTML = '';
     if (state.user.role === 'ASTRONAUT') {
