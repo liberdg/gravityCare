@@ -2273,7 +2273,7 @@
       const list = document.getElementById('anatomySystemList');
       if (list) list.innerHTML = keys.map(key => {
         const active = currentBodySystem === key;
-        return '<button type="button" onclick="selectBodySystem(\\'' + key + '\\')" class="text-left rounded-lg border px-2.5 py-2 text-[10px] font-semibold ' + (active ? 'bg-sky-500/20 border-sky-400/50 text-sky-200' : 'bg-slate-900 border-slate-700 text-slate-300 hover:border-sky-400/40') + '">' + healthEsc(names[key]) + '</button>';
+        return '<button type="button" onclick="selectBodySystem(&quot;' + key + '&quot;)" class="text-left rounded-lg border px-2.5 py-2 text-[10px] font-semibold ' + (active ? 'bg-sky-500/20 border-sky-400/50 text-sky-200' : 'bg-slate-900 border-slate-700 text-slate-300 hover:border-sky-400/40') + '">' + healthEsc(names[key]) + '</button>';
       }).join('');
 
       const data = aLang.systems[currentBodySystem];
