@@ -2223,7 +2223,7 @@
       paintBodyMap(astro);
       const who = document.getElementById('bodyMapWho');
       if (who) who.textContent = `${i18n[currentLang].mapOf} ${astro.shortName}`;
-      const sysData = aLang.systems[currentBodySystem];
+      const sysData = aLang.systems[currentBodySystem] || { title: currentLang === 'fr' ? 'Système anatomique' : 'Anatomical system', badge: currentLang === 'fr' ? 'DONNÉES NON DISPONIBLES' : 'NO DATA', metrics: '—', desc: currentLang === 'fr' ? 'Aucune donnée dédiée enregistrée pour ce système dans le prototype.' : 'No dedicated data recorded for this system in the prototype.' };
       document.getElementById('bodySysTitle').textContent = sysData.title;
       document.getElementById('bodySysBadge').textContent = sysData.badge;
       document.getElementById('bodySysMetrics').textContent = sysData.metrics;
