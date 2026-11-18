@@ -2282,6 +2282,19 @@
     // --- SCENARIO CONTROLLER ---
     let alertBeepTimer = null;
     const alertSources = { scenario: false, records: false };
+    let alertAudioRole = null;
+
+    window.gcSetAlertAudioRole = function (role) {
+      alertAudioRole = role === 'ASTRONAUT' ? 'ASTRONAUT' : null;
+      if (alertAudioRole !== 'ASTRONAUT' && alertBeepTimer) {
+        clearInterval(alertBeepTimer);
+        alertBeepTimer = null;
+      }
+      if (alertAudioRole !== 'ASTRONAUT') {
+        alertSources.scenario = false;
+        alertSources.records = false;
+      }
+    };
 
     function playAlertBeep() {
       const Ctx = window.AudioContext || window.webkitAudioContext;
@@ -2320,7 +2333,7 @@
     }
 
     function refreshAlertBeep() {
-      const active = alertSources.scenario || alertSources.records;
+      const active = alertAudioRole === 'ASTRONAUT' && (alertSources.scenario || alertSources.records);
       if (!active) {
         if (alertBeepTimer) {
           clearInterval(alertBeepTimer);
@@ -2350,7 +2363,7 @@
     function setScenario(scenarioKey) {
       currentScenario = scenarioKey;
       protocolSeconds = 0;
-      alertSources.scenario = scenarioKey !== 'nominal';
+      alertSources.scenario = alertAudioRole === 'ASTRONAUT' && scenarioKey !== 'nominal';
       refreshAlertBeep();
 
       document.querySelectorAll('.sim-btn').forEach(btn => {
