@@ -2228,6 +2228,147 @@
       document.getElementById('bodySysBadge').textContent = sysData.badge;
       document.getElementById('bodySysMetrics').textContent = sysData.metrics;
       document.getElementById('bodySysDesc').textContent = sysData.desc;
+      renderHealthWorkspace(astro, aLang);
+    }
+
+    let anatomyView = 'front';
+    let recordedVitalsCache = { profileId: null, data: [], loadedAt: 0 };
+
+    function setAnatomyView(view) {
+      anatomyView = view === 'back' ? 'back' : 'front';
+      document.getElementById('anatomyFront')?.classList.toggle('hidden', anatomyView !== 'front');
+      document.getElementById('anatomyBack')?.classList.toggle('hidden', anatomyView !== 'back');
+      const fr = currentLang === 'fr';
+      const label = document.getElementById('anatomyViewLabel');
+      if (label) label.textContent = anatomyView === 'front' ? (fr ? 'VUE ANTÉRIEURE' : 'ANTERIOR VIEW') : (fr ? 'VUE POSTÉRIEURE' : 'POSTERIOR VIEW');
+      ['anatomyFrontBtn','anatomyBackBtn'].forEach(id => {
+        const active = (id === 'anatomyFrontBtn') === (anatomyView === 'front');
+        const el = document.getElementById(id);
+        if (el) el.className = 'px-2 py-1 rounded-md text-[10px] font-mono border ' + (active ? 'bg-sky-500/20 border-sky-400/50 text-sky-200' : 'bg-slate-900 border-slate-700 text-slate-400');
+      });
+    }
+
+    function healthEsc(value) {
+      return String(value ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+    }
+
+    function renderHealthWorkspace(astro, aLang) {
+      const fr = currentLang === 'fr';
+      const names = {
+        cardio: fr ? 'Cardiovasculaire' : 'Cardiovascular',
+        respiratory: fr ? 'Respiratoire' : 'Respiratory',
+        neuro: fr ? 'Nerveux / neuro-oculaire' : 'Nervous / neuro-ocular',
+        digestive: fr ? 'Digestif' : 'Digestive',
+        renal: fr ? 'Rénal / urinaire' : 'Renal / urinary',
+        musculo: fr ? 'Osseux et musculaire' : 'Bone and muscle',
+        metabolic: fr ? 'Métabolique' : 'Metabolic',
+        radiation: fr ? 'Exposition radiologique' : 'Radiation exposure'
+      };
+      const descriptions = {
+        respiratory: fr ? 'Poumons, voies aériennes et échanges gazeux. Aucune spirométrie ou mesure respiratoire dédiée n’est connectée dans cette version.' : 'Lungs, airways and gas exchange. No dedicated spirometry or respiratory measurement is connected in this version.',
+        digestive: fr ? 'Estomac, foie et intestins. Les données alimentaires sont suivies dans le module Nutrition ; aucune imagerie réelle n’est affichée ici.' : 'Stomach, liver and intestines. Food records are tracked in Nutrition; no real medical imaging is displayed here.',
+        renal: fr ? 'Reins et voies urinaires. La fonction rénale nécessiterait des mesures dédiées qui ne sont pas encore disponibles.' : 'Kidneys and urinary tract. Renal function would require dedicated measurements that are not available yet.'
+      };
+      const keys = ['cardio','respiratory','neuro','digestive','renal','musculo','metabolic','radiation'];
+      const list = document.getElementById('anatomySystemList');
+      if (list) list.innerHTML = keys.map(key => {
+        const active = currentBodySystem === key;
+        return '<button type="button" onclick="selectBodySystem(\\'' + key + '\\')" class="text-left rounded-lg border px-2.5 py-2 text-[10px] font-semibold ' + (active ? 'bg-sky-500/20 border-sky-400/50 text-sky-200' : 'bg-slate-900 border-slate-700 text-slate-300 hover:border-sky-400/40') + '">' + healthEsc(names[key]) + '</button>';
+      }).join('');
+
+      const data = aLang.systems[currentBodySystem];
+      const el = id => document.getElementById(id);
+      if (el('anatomyDetailTitle')) el('anatomyDetailTitle').textContent = data?.title || names[currentBodySystem] || '';
+      if (el('anatomyDetailStatus')) el('anatomyDetailStatus').textContent = fr ? 'DONNÉES DÉMO' : 'DEMO DATA';
+      if (el('anatomyDetailDescription')) el('anatomyDetailDescription').textContent = data?.desc || descriptions[currentBodySystem] || (fr ? 'Aucune donnée dédiée enregistrée pour ce système.' : 'No dedicated data recorded for this system.');
+      if (el('anatomyDetailMeasures')) el('anatomyDetailMeasures').innerHTML = data?.metrics
+        ? '<div class="text-[11px] font-mono text-sky-200 rounded-lg bg-slate-900 p-2">' + healthEsc(data.metrics) + '</div>'
+        : '<div class="text-[11px] text-slate-400 rounded-lg bg-slate-900 p-2">' + (fr ? 'Aucune mesure instrumentale disponible' : 'No instrument measurement available') + '</div>';
+      if (el('anatomyDetailCaution')) el('anatomyDetailCaution').textContent = fr
+        ? 'Les états et valeurs proviennent du scénario fictif. Ils ne constituent ni un diagnostic ni un avis médical.'
+        : 'Statuses and values come from the fictional scenario. They are not a diagnosis or medical advice.';
+      setAnatomyView(anatomyView);
+
+      const scenario = scenarios[currentScenario];
+      const vitals = [
+        [fr ? 'Fréquence cardiaque' : 'Heart rate', scenario.hrBase + astro.hrOffset, 'bpm'],
+        ['SpO₂', Math.min(100, astro.spo2Base + scenario.spo2Delta), '%'],
+        [fr ? 'Variabilité FC' : 'Heart-rate variability', Math.max(18, astro.hrvBase + scenario.hrvDelta), 'ms'],
+        [fr ? 'Pression artérielle' : 'Blood pressure', astro.bp, 'mmHg'],
+        [fr ? 'Température' : 'Temperature', (astro.temp + scenario.tempDelta).toFixed(1), '°C'],
+        [fr ? 'Glycémie' : 'Glucose', astro.glucose, 'mg/dL']
+      ];
+      if (el('healthVitalCards')) el('healthVitalCards').innerHTML = vitals.map(v => '<div class="health-metric"><div class="text-[10px] text-slate-400">' + healthEsc(v[0]) + '</div><div class="mt-1 text-xl font-mono font-bold text-white">' + healthEsc(v[1]) + '<span class="ml-1 text-[9px] font-normal text-slate-400">' + healthEsc(v[2]) + '</span></div><div class="mt-1 text-[9px] text-amber-300">' + (fr ? 'SIMULÉ' : 'SIMULATED') + '</div></div>').join('');
+
+      const bmd = String(astro.vo2Bone || '').split('/')[1]?.trim() || '—';
+      const ared = Math.max(0, Math.min(100, Number(astro.aredPct) || 0));
+      if (el('boneMusclePanel')) el('boneMusclePanel').innerHTML =
+        '<div class="rounded-xl bg-slate-950/70 border border-slate-800 p-3"><div class="flex justify-between gap-2 text-xs"><span class="text-slate-300">' + (fr ? 'Variation osseuse du scénario' : 'Scenario bone change') + '</span><strong class="text-white">' + healthEsc(bmd) + '</strong></div><p class="text-[10px] text-slate-500 mt-1">' + (fr ? 'Valeur fictive, non issue d’une densitométrie.' : 'Fictional value, not from a bone-density scan.') + '</p></div>' +
+        '<div class="rounded-xl bg-slate-950/70 border border-slate-800 p-3"><div class="flex justify-between gap-2 text-xs"><span class="text-slate-300">' + (fr ? 'Contre-mesure ARED' : 'ARED countermeasure') + '</span><strong class="text-white">' + ared + '%</strong></div><div class="health-bar mt-2"><span style="width:' + ared + '%"></span></div><p class="text-[10px] text-slate-500 mt-1">' + healthEsc(astro.aredMins || '—') + ' · ' + (fr ? 'donnée de scénario' : 'scenario data') + '</p></div>' +
+        '<div class="rounded-xl bg-slate-950/70 border border-slate-800 p-3"><div class="text-xs text-slate-300">' + (fr ? 'VO₂ max estimé dans le scénario' : 'Scenario estimated VO₂ max') + '</div><strong class="text-white font-mono text-lg">' + healthEsc(String(astro.vo2Bone || '—').split('/')[0].trim()) + '</strong><p class="text-[10px] text-slate-500">' + (fr ? 'Indice fictif, aucun test connecté.' : 'Fictional index; no connected test.') + '</p></div>';
+
+      if (el('sleepHealthPanel')) el('sleepHealthPanel').innerHTML =
+        '<div class="flex items-end justify-between gap-3"><div><div class="text-3xl font-mono font-bold text-white">' + healthEsc(astro.sleepHrs) + '</div><p class="text-[11px] text-slate-400">' + (fr ? 'Durée de sommeil du scénario' : 'Scenario sleep duration') + '</p></div><span class="text-xs rounded-lg px-2 py-1 border border-sky-500/30 text-sky-200">' + (fr ? 'Rythme circadien' : 'Circadian rhythm') + '</span></div>' +
+        '<div class="grid grid-cols-7 gap-2 items-end h-20 mt-4">' + astro.sevenDay.map(p => '<div class="flex flex-col items-center gap-1 h-full justify-end"><div class="w-full rounded-t bg-sky-400/80" style="height:' + Math.max(5,Math.min(100,p.sleep/9*100)) + '%"></div><span class="text-[8px] text-slate-500">' + healthEsc(p.day) + '</span></div>').join('') + '</div>' +
+        '<p class="text-[10px] text-slate-500 mt-3">' + (fr ? 'Historique illustratif sur 7 jours. Aucun journal de sommeil n’est encore stocké dans la base.' : 'Illustrative 7-day history. No sleep log is stored in the database yet.') + '</p>';
+
+      if (el('mentalHealthPanel')) el('mentalHealthPanel').innerHTML =
+        '<div class="rounded-xl bg-slate-950/70 border border-slate-800 p-3"><div class="text-[10px] text-slate-400">' + (fr ? 'État de bien-être du scénario' : 'Scenario well-being state') + '</div><div class="text-lg font-display font-bold text-white mt-1">' + healthEsc(aLang.mood) + '</div><p class="text-[11px] text-slate-400 mt-2">' + (fr ? 'Étiquette de démonstration, pas un dépistage psychologique.' : 'Demo label, not a psychological screening.') + '</p></div><p class="mt-3 text-[11px] text-slate-300">' + (fr ? 'À développer : questionnaire volontaire et confidentiel sur le stress, l’humeur, l’isolement et la charge de travail, avec accès limité au personnel clinique.' : 'Next: a voluntary, confidential check-in on stress, mood, isolation and workload, restricted to clinical staff.') + '</p>';
+
+      const texts = {
+        healthWorkspaceTitle: fr ? 'Surveillance médicale intégrée' : 'Integrated health monitoring',
+        healthWorkspaceSub: fr ? 'Données simulées distinctes des mesures réellement enregistrées.' : 'Simulated data are separated from actually recorded measurements.',
+        healthDataMode: fr ? 'MODE SIMULATION' : 'SIMULATION MODE',
+        anatomyKicker: fr ? 'CARTOGRAPHIE ANATOMIQUE' : 'ANATOMICAL MAPPING',
+        anatomyHeading: fr ? 'Systèmes et organes' : 'Systems and organs',
+        physioKicker: fr ? 'SURVEILLANCE PHYSIOLOGIQUE' : 'PHYSIOLOGICAL MONITORING',
+        physioHeading: fr ? 'Constantes vitales' : 'Vital signs',
+        physioFootnote: fr ? 'Valeurs illustratives du scénario. Aucune donnée de capteur biomédical en direct.' : 'Illustrative scenario values. No live biomedical sensor data.',
+        historyKicker: fr ? 'HISTORIQUE PHYSIOLOGIQUE' : 'PHYSIOLOGICAL HISTORY',
+        historyHeading: fr ? 'Mesures réellement enregistrées' : 'Actually recorded measurements',
+        boneKicker: fr ? 'SANTÉ OSSEUSE ET MUSCULAIRE' : 'BONE AND MUSCLE HEALTH',
+        boneHeading: fr ? 'Contre-mesures physiques' : 'Physical countermeasures',
+        sleepKicker: fr ? 'SOMMEIL ET RYTHME CIRCADIEN' : 'SLEEP AND CIRCADIAN RHYTHM',
+        sleepHeading: fr ? 'Récupération et sommeil' : 'Recovery and sleep',
+        mentalKicker: fr ? 'SANTÉ PSYCHOLOGIQUE' : 'PSYCHOLOGICAL HEALTH',
+        mentalHeading: fr ? 'Bien-être et facteurs humains' : 'Well-being and human factors'
+      };
+      Object.entries(texts).forEach(([id,value]) => { if (el(id)) el(id).textContent = value; });
+      if (el('anatomySelectedCrew')) el('anatomySelectedCrew').textContent = astro.fullName + ' · ' + astro.agency;
+      void loadRecordedVitals(astro);
+    }
+
+    async function loadRecordedVitals(astro) {
+      const panel = document.getElementById('recordedVitalsPanel');
+      if (!panel || !window.GC_MEDICAL_CREW || !window.GC_FETCH_VITALS) {
+        if (panel) panel.textContent = currentLang === 'fr' ? 'Historique indisponible pour cette session.' : 'History unavailable for this session.';
+        return;
+      }
+      const callSign = Object.keys(CALL_TO_LOCAL).find(key => CALL_TO_LOCAL[key] === astro.id);
+      const profile = window.GC_MEDICAL_CREW.find(item => item.callSign === callSign);
+      if (!profile) {
+        panel.textContent = currentLang === 'fr' ? 'Profil médical non accessible avec ce rôle.' : 'Medical profile not accessible for this role.';
+        return;
+      }
+      if (recordedVitalsCache.profileId !== profile.id || Date.now() - recordedVitalsCache.loadedAt > 30000) {
+        panel.textContent = currentLang === 'fr' ? 'Chargement des mesures…' : 'Loading measurements…';
+        try {
+          const data = await window.GC_FETCH_VITALS(profile.id);
+          recordedVitalsCache = { profileId: profile.id, data: Array.isArray(data) ? data : [], loadedAt: Date.now() };
+        } catch (error) {
+          panel.textContent = currentLang === 'fr' ? 'Impossible de charger les mesures enregistrées.' : 'Unable to load recorded measurements.';
+          return;
+        }
+      }
+      const rows = recordedVitalsCache.data.slice(0, 8);
+      const count = document.getElementById('historyCount');
+      if (count) count.textContent = rows.length + (currentLang === 'fr' ? ' mesure(s)' : ' measurement(s)');
+      if (!rows.length) {
+        panel.innerHTML = '<div class="rounded-xl bg-slate-950/70 border border-slate-800 p-3 text-xs text-slate-400">' + (currentLang === 'fr' ? 'Aucune mesure enregistrée pour cet astronaute. Les valeurs voisines sont des simulations.' : 'No recorded measurements for this astronaut. Adjacent values are simulations.') + '</div>';
+        return;
+      }
+      const types = { HEART_RATE: currentLang === 'fr' ? 'Fréquence cardiaque' : 'Heart rate', SPO2: 'SpO₂', HRV: currentLang === 'fr' ? 'Variabilité FC' : 'HRV', BLOOD_PRESSURE: currentLang === 'fr' ? 'Pression artérielle' : 'Blood pressure', TEMPERATURE: currentLang === 'fr' ? 'Température' : 'Temperature' };
+      panel.innerHTML = rows.map(row => '<div class="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-slate-950/70 border border-slate-800 px-3 py-2"><div><div class="text-xs text-white font-semibold">' + healthEsc(types[row.type] || row.type) + '</div><div class="text-[9px] text-slate-500">' + healthEsc(row.source || '—') + '</div></div><div class="text-right"><div class="font-mono text-sm text-sky-200">' + healthEsc(row.value) + ' ' + healthEsc(row.unit) + '</div><div class="text-[9px] text-slate-500">' + new Date(row.measuredAt).toLocaleString(currentLang === 'fr' ? 'fr-FR' : 'en-US') + '</div></div></div>').join('');
     }
 
     function selectBodySystem(sysKey) {
