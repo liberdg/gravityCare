@@ -21,6 +21,9 @@ const createSchema = z.object({
   recordedAt: z.string().datetime().optional()
 }).refine(data => data.numericValue !== undefined || Boolean(data.textValue), {
   message: 'Provide a numeric value or a text value'
+}).refine(data => !data.recordedAt || new Date(data.recordedAt).getTime() <= Date.now() + 5 * 60 * 1000, {
+  message: 'recordedAt cannot be in the future',
+  path: ['recordedAt']
 });
 
 healthLogRouter.get('/:astronautId', async (req, res, next) => {
