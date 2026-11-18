@@ -216,6 +216,9 @@
             <button onclick="switchView('cockpit')" id="tab-cockpit" class="nav-tab px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-display font-semibold transition-all bg-sky-500/20 text-sky-300 border border-sky-400/40 whitespace-nowrap">
               Dashboard
             </button>
+            <button onclick="switchView('copilot')" id="tab-copilot" class="nav-tab px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-display font-semibold transition-all text-slate-400 hover:text-white border border-transparent whitespace-nowrap flex items-center gap-1.5">
+              <span class="text-sky-400">✦</span><span>Copilot</span>
+            </button>
             <button onclick="switchView('crew')" id="tab-crew" class="nav-tab px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-display font-semibold transition-all text-slate-400 hover:text-white border border-transparent whitespace-nowrap flex items-center gap-1.5">
               <span class="w-2 h-2 rounded-full bg-sky-400"></span>
               <span data-i18n="navCrew">2. Astronaut Profiles (4)</span>
@@ -669,38 +672,64 @@
             <div class="grid grid-cols-1 sm:grid-cols-12 gap-4 items-center">
               <!-- Stylized Futuristic Human Silhouette SVG with Clickable Hotspots -->
               <div class="sm:col-span-5 flex justify-center bg-slate-950/75 rounded-2xl border border-slate-800/90 p-3 relative">
-                <svg class="w-40 h-64" viewBox="0 0 160 260" fill="none">
-                  <!-- Scanning grid lines -->
-                  <line x1="10" y1="40" x2="150" y2="40" stroke="rgba(56,189,248,0.12)" stroke-dasharray="3 3"/>
-                  <line x1="10" y1="100" x2="150" y2="100" stroke="rgba(56,189,248,0.12)" stroke-dasharray="3 3"/>
-                  <line x1="10" y1="175" x2="150" y2="175" stroke="rgba(56,189,248,0.12)" stroke-dasharray="3 3"/>
-                  <!-- Stylized Astronaut Silhouette -->
-                  <circle cx="80" cy="30" r="18" stroke="#38BDF8" stroke-width="1.5" fill="rgba(56,189,248,0.08)"/>
-                  <path d="M52 62 C52 54, 108 54, 108 62 L118 122 L104 126 L98 84 L98 148 L106 238 L88 238 L80 164 L72 238 L54 238 L62 148 L62 84 L56 126 L42 122 Z"
-                        stroke="#38BDF8" stroke-width="1.5" fill="rgba(56,189,248,0.06)" stroke-linejoin="round"/>
-
-                  <!-- Hotspot 1: Neuro-Ocular / SANS (Head) -->
-                  <g class="body-hotspot" data-zone="neuro" onclick="selectBodySystem('neuro')">
-                    <circle class="zone-glow" cx="80" cy="28" r="13" fill="rgba(16,185,129,0.22)" />
-                    <circle class="hotspot-core" cx="80" cy="28" r="6" fill="#10B981" stroke="#050811" stroke-width="2" />
+                <svg class="w-52 h-80 max-w-full" viewBox="0 0 220 320" role="img" aria-label="Schéma anatomique holographique des systèmes physiologiques de l’astronaute" fill="none">
+                  <defs>
+                    <radialGradient id="holoBody" cx="50%" cy="38%" r="65%">
+                      <stop offset="0%" stop-color="#0ea5e9" stop-opacity=".22"/>
+                      <stop offset="70%" stop-color="#0284c7" stop-opacity=".08"/>
+                      <stop offset="100%" stop-color="#020617" stop-opacity="0"/>
+                    </radialGradient>
+                    <linearGradient id="holoLine" x1="0" y1="0" x2="1" y2="1">
+                      <stop stop-color="#7dd3fc"/><stop offset=".5" stop-color="#38bdf8"/><stop offset="1" stop-color="#0e7490"/>
+                    </linearGradient>
+                    <filter id="holoGlow" x="-60%" y="-40%" width="220%" height="180%">
+                      <feGaussianBlur stdDeviation="3" result="blur"/>
+                      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+                    </filter>
+                  </defs>
+                  <ellipse cx="110" cy="160" rx="100" ry="150" fill="url(#holoBody)"/>
+                  <ellipse cx="110" cy="160" rx="96" ry="145" stroke="#0ea5e9" stroke-opacity=".2"/>
+                  <ellipse cx="110" cy="160" rx="83" ry="132" stroke="#38bdf8" stroke-opacity=".12" stroke-dasharray="2 6"/>
+                  <path d="M12 72H208M8 160H212M18 252H202" stroke="#38bdf8" stroke-opacity=".12" stroke-dasharray="3 6"/>
+                  <g stroke="url(#holoLine)" stroke-linecap="round" stroke-linejoin="round" filter="url(#holoGlow)">
+                    <!-- Outer anatomical silhouette -->
+                    <path d="M91 65 Q74 69 65 82 L49 132 Q45 146 53 153 L63 157 L76 119 L73 174 Q70 194 79 211 L75 286 Q74 299 86 300 L98 300 L109 224 L121 300 L135 300 Q147 298 144 285 L139 210 Q149 190 146 171 L144 119 L157 157 L168 153 Q176 145 170 131 L154 83 Q145 69 129 65 Q110 58 91 65Z" fill="#0284c7" fill-opacity=".08" stroke-width="1.8"/>
+                    <!-- Head, neck and shoulders -->
+                    <path d="M91 22 Q110 8 129 22 L132 43 Q130 61 110 66 Q90 61 88 43Z" fill="#0c4a6e" fill-opacity=".2" stroke-width="1.8"/>
+                    <path d="M99 64L99 76M121 64L121 76M75 82Q110 95 145 82" stroke-width="1.4"/>
+                    <path d="M89 31Q110 42 131 31M92 43Q110 51 128 43" stroke-opacity=".55" stroke-width="1"/>
+                    <!-- Spine -->
+                    <path d="M110 69V225" stroke-width="2.4"/>
+                    <path d="M105 78h10m-10 10h10m-10 10h10m-10 10h10m-10 10h10m-10 10h10m-10 10h10m-10 10h10m-10 10h10m-10 10h10m-10 10h10m-10 10h10m-10 10h10" stroke-width="1.2"/>
+                    <!-- Rib cage -->
+                    <path d="M108 82Q82 76 80 98Q78 118 105 130M112 82Q138 76 140 98Q142 118 115 130" stroke-width="1.5"/>
+                    <path d="M108 89Q88 85 87 101Q87 115 106 121M112 89Q132 85 133 101Q133 115 114 121M108 99Q93 97 94 110Q96 120 107 125M112 99Q127 97 126 110Q124 120 113 125" stroke-width="1.1"/>
+                    <!-- Lungs -->
+                    <path d="M104 91Q91 88 86 104Q82 119 95 126Q104 127 106 115Z" fill="#38bdf8" fill-opacity=".13" stroke-width="1.4"/>
+                    <path d="M116 91Q129 88 134 104Q138 119 125 126Q116 127 114 115Z" fill="#38bdf8" fill-opacity=".13" stroke-width="1.4"/>
+                    <!-- Heart -->
+                    <path d="M110 108C101 98 91 108 98 118L110 130L122 118C129 108 119 98 110 108Z" fill="#fb7185" fill-opacity=".5" stroke="#fda4af" stroke-width="1.7"/>
+                    <!-- Liver and stomach -->
+                    <path d="M83 139Q96 132 109 140Q108 153 92 155Q80 153 83 139Z" fill="#f59e0b" fill-opacity=".22" stroke="#fbbf24" stroke-width="1.2"/>
+                    <path d="M116 137Q132 133 132 148Q130 160 118 158Q111 151 116 137Z" fill="#38bdf8" fill-opacity=".18" stroke-width="1.2"/>
+                    <!-- Intestines -->
+                    <path d="M91 163Q83 159 84 170Q84 179 96 177Q106 175 105 184Q103 193 92 189Q82 185 86 198Q91 207 104 199Q113 194 117 202Q123 211 134 202Q141 194 130 188Q119 183 119 174Q119 164 130 166" stroke-width="2"/>
+                    <path d="M96 166Q104 160 111 168Q118 176 110 183Q102 190 112 196" stroke-width="1.2"/>
+                    <!-- Pelvis -->
+                    <path d="M82 207Q96 216 110 210Q124 216 138 207M84 211Q88 230 101 231L110 220L119 231Q132 230 136 211" stroke-width="1.6"/>
+                    <!-- Arms and leg bones -->
+                    <path d="M62 103L54 143L64 151M158 103L166 143L156 151M85 225L89 281M135 225L131 281" stroke-width="2"/>
+                    <path d="M78 116L68 148M142 116L152 148M91 234L84 286M129 234L136 286" stroke-opacity=".65" stroke-width="1.1"/>
+                    <!-- Fine hologram scan contours -->
+                    <path d="M70 92Q110 72 150 92M75 156Q110 145 145 156M78 204Q110 218 142 204" stroke-opacity=".45" stroke-width="1" stroke-dasharray="2 4"/>
                   </g>
-                  <g class="body-hotspot" data-zone="cardio" onclick="selectBodySystem('cardio')">
-                    <circle class="zone-glow" cx="86" cy="82" r="14" fill="rgba(16,185,129,0.22)" />
-                    <circle class="hotspot-core" cx="86" cy="82" r="6" fill="#10B981" stroke="#050811" stroke-width="2" />
-                  </g>
-                  <g class="body-hotspot" data-zone="metabolic" onclick="selectBodySystem('metabolic')">
-                    <circle class="zone-glow" cx="76" cy="118" r="13" fill="rgba(16,185,129,0.22)" />
-                    <circle class="hotspot-core" cx="76" cy="118" r="6" fill="#10B981" stroke="#050811" stroke-width="2" />
-                  </g>
-                  <g class="body-hotspot" data-zone="radiation" onclick="selectBodySystem('radiation')">
-                    <circle class="zone-glow" cx="111" cy="104" r="13" fill="rgba(16,185,129,0.22)" />
-                    <circle class="hotspot-core" cx="111" cy="104" r="6" fill="#10B981" stroke="#050811" stroke-width="2" />
-                  </g>
-                  <g class="body-hotspot" data-zone="musculo" onclick="selectBodySystem('musculo')">
-                    <circle class="zone-glow" cx="66" cy="192" r="14" fill="rgba(16,185,129,0.22)" />
-                    <circle class="hotspot-core" cx="66" cy="192" r="6" fill="#10B981" stroke="#050811" stroke-width="2" />
-                  </g>
-                </svg>
+                  <!-- Interactive physiological status points -->
+                  <g class="body-hotspot" data-zone="neuro" onclick="selectBodySystem('neuro')"><circle class="zone-glow" cx="110" cy="39" r="15" fill="rgba(16,185,129,.22)"/><circle class="hotspot-core" cx="110" cy="39" r="5.5" fill="#10B981" stroke="#050811" stroke-width="2"/></g>
+                  <g class="body-hotspot" data-zone="cardio" onclick="selectBodySystem('cardio')"><circle class="zone-glow" cx="110" cy="116" r="16" fill="rgba(16,185,129,.22)"/><circle class="hotspot-core" cx="110" cy="116" r="5.5" fill="#10B981" stroke="#050811" stroke-width="2"/></g>
+                  <g class="body-hotspot" data-zone="metabolic" onclick="selectBodySystem('metabolic')"><circle class="zone-glow" cx="110" cy="180" r="15" fill="rgba(16,185,129,.22)"/><circle class="hotspot-core" cx="110" cy="180" r="5.5" fill="#10B981" stroke="#050811" stroke-width="2"/></g>
+                  <g class="body-hotspot" data-zone="radiation" onclick="selectBodySystem('radiation')"><circle class="zone-glow" cx="151" cy="158" r="14" fill="rgba(16,185,129,.22)"/><circle class="hotspot-core" cx="151" cy="158" r="5.5" fill="#10B981" stroke="#050811" stroke-width="2"/></g>
+                  <g class="body-hotspot" data-zone="musculo" onclick="selectBodySystem('musculo')"><circle class="zone-glow" cx="91" cy="263" r="15" fill="rgba(16,185,129,.22)"/><circle class="hotspot-core" cx="91" cy="263" r="5.5" fill="#10B981" stroke="#050811" stroke-width="2"/></g>
+                </svg>          </svg>
               </div>
 
               <!-- Selected Body System Diagnostic Readout -->
@@ -1017,6 +1046,48 @@
       </div>
     </section>
 
+    <section id="view-copilot" class="hidden space-y-4 pb-6">
+      <div class="glass-card rounded-2xl p-4 sm:p-6 border border-sky-500/20">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
+          <div>
+            <p class="text-[10px] font-mono uppercase tracking-widest text-sky-300">GRAVITYCARE INTELLIGENCE</p>
+            <h2 class="font-display font-bold text-2xl text-white mt-1">Clinical Copilot</h2>
+            <p class="text-xs text-slate-400 mt-1">Assistant conversationnel et analyse des données physiologiques simulées.</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+            <span class="text-[10px] font-mono text-emerald-300">AI ASSISTANT</span>
+          </div>
+        </div>
+        <div class="grid grid-cols-1 xl:grid-cols-3 gap-4">
+          <aside class="xl:col-span-1 rounded-xl bg-slate-950/70 border border-slate-800 p-4">
+            <h3 class="text-sm font-display font-bold text-white">Astronaut context</h3>
+            <p class="text-[11px] text-slate-400 mt-1">The selected cockpit profile and its simulated telemetry are attached to each request.</p>
+            <div class="mt-3 space-y-2 text-xs">
+              <div class="flex justify-between gap-2"><span class="text-slate-500">Selected crew</span><strong id="copilotCrewName" class="text-slate-200">—</strong></div>
+              <div class="flex justify-between gap-2"><span class="text-slate-500">Mission scenario</span><strong id="copilotScenario" class="text-slate-200">—</strong></div>
+              <div class="flex justify-between gap-2"><span class="text-slate-500">Language</span><strong id="copilotLanguage" class="text-slate-200">—</strong></div>
+            </div>
+            <button type="button" onclick="runCopilotHealthAnalysis()" class="w-full mt-4 rounded-lg bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-xs px-3 py-2.5">Analyze selected astronaut</button>
+            <p class="text-[10px] text-slate-500 mt-3">Fictional demo only. Not a medical device, diagnosis, or emergency service.</p>
+          </aside>
+          <div class="xl:col-span-2 rounded-xl bg-slate-950/70 border border-slate-800 p-3 sm:p-4 flex flex-col min-h-[470px]">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-3">
+              <div><h3 class="text-sm font-display font-bold text-white">Conversation</h3><p class="text-[10px] text-slate-500">Ask questions in French or English</p></div>
+              <button type="button" onclick="clearCopilotConversation()" class="text-[10px] text-slate-400 hover:text-white border border-slate-700 rounded-lg px-2.5 py-1.5">New conversation</button>
+            </div>
+            <div id="copilotConversation" class="space-y-3 flex-1 overflow-y-auto max-h-[420px] pr-1" aria-live="polite">
+              <div class="rounded-xl bg-sky-950/50 border border-sky-500/20 p-3 text-xs text-slate-200">Bonjour ! Je suis le GravityCare Copilot. Je peux discuter des données simulées de l'astronaute sélectionné et aider à structurer leur analyse. Que souhaites-tu examiner ?</div>
+            </div>
+            <div class="flex gap-2 mt-3">
+              <input id="copilotChatInput" type="text" maxlength="1800" class="min-w-0 flex-1 bg-slate-900 border border-slate-700 focus:border-sky-400 rounded-lg px-3 py-3 text-sm text-white outline-none" placeholder="Pose ta question au Copilot..." />
+              <button id="copilotSendBtn" type="button" onclick="sendCopilotMessage()" class="px-4 py-3 rounded-lg bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-xs">Envoyer</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
   </main>
 
   <!-- =======================================================================
@@ -1051,6 +1122,7 @@
   <script>
     // --- GLOBAL STATE ---
     let currentLang = 'fr';
+    let copilotHistory = [];
     let currentScenario = 'nominal';
     let currentView = 'cockpit';
     let currentAstroId = 'vance';
@@ -2206,7 +2278,7 @@
     // --- VIEW SWITCHER ---
     function switchView(viewName) {
       currentView = viewName;
-      ['cockpit', 'crew', 'emergency', 'dualuse', 'ward', 'nutrition', 'alerts', 'messages', 'ground', 'admin'].forEach(v => {
+      ['cockpit', 'copilot', 'crew', 'emergency', 'dualuse', 'ward', 'nutrition', 'alerts', 'messages', 'ground', 'admin'].forEach(v => {
         const view = document.getElementById(`view-${v}`);
         if (view) view.classList.add('hidden');
         const tab = document.getElementById(`tab-${v}`);
@@ -2226,6 +2298,8 @@
 
       if (viewName === 'cockpit') {
         resizeCanvas();
+      } else if (viewName === 'copilot') {
+        refreshCopilotContext();
       } else if (viewName === 'crew') {
         renderCrewDossierView();
       }
@@ -2234,6 +2308,19 @@
     // --- SCENARIO CONTROLLER ---
     let alertBeepTimer = null;
     const alertSources = { scenario: false, records: false };
+    let alertAudioRole = null;
+
+    window.gcSetAlertAudioRole = function (role) {
+      alertAudioRole = role === 'ASTRONAUT' ? 'ASTRONAUT' : null;
+      if (alertAudioRole !== 'ASTRONAUT' && alertBeepTimer) {
+        clearInterval(alertBeepTimer);
+        alertBeepTimer = null;
+      }
+      if (alertAudioRole !== 'ASTRONAUT') {
+        alertSources.scenario = false;
+        alertSources.records = false;
+      }
+    };
 
     function playAlertBeep() {
       const Ctx = window.AudioContext || window.webkitAudioContext;
@@ -2272,7 +2359,7 @@
     }
 
     function refreshAlertBeep() {
-      const active = alertSources.scenario || alertSources.records;
+      const active = alertAudioRole === 'ASTRONAUT' && (alertSources.scenario || alertSources.records);
       if (!active) {
         if (alertBeepTimer) {
           clearInterval(alertBeepTimer);
@@ -2302,7 +2389,7 @@
     function setScenario(scenarioKey) {
       currentScenario = scenarioKey;
       protocolSeconds = 0;
-      alertSources.scenario = scenarioKey !== 'nominal';
+      alertSources.scenario = alertAudioRole === 'ASTRONAUT' && scenarioKey !== 'nominal';
       refreshAlertBeep();
 
       document.querySelectorAll('.sim-btn').forEach(btn => {
@@ -2547,35 +2634,121 @@
       parseSymptomLog();
     }
 
-    function parseSymptomLog() {
+    function getCopilotSnapshot() {
+      const astro = astronauts[currentAstroId] || {};
+      const read = id => document.getElementById(id)?.textContent?.trim() || null;
+      return {
+        astronaut: astro.fullName || astro.shortName || currentAstroId,
+        callsign: currentAstroId,
+        language: currentLang,
+        scenario: currentScenario,
+        heartRate: read('vital-hr'),
+        oxygenSaturation: read('vital-spo2'),
+        heartRateVariability: read('vital-hrv'),
+        bloodPressure: read('vital-bp'),
+        glucose: read('vital-glucose'),
+        temperature: read('vital-temp'),
+        missionDay: astro.missionDay || null,
+        note: 'All values are simulated by this GravityCare demonstration interface.'
+      };
+    }
+
+    async function callGravityCareCopilot(mode, message, history = []) {
+      const response = await fetch('/api/copilot/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mode, message, history: history.slice(-8), context: getCopilotSnapshot() })
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.error || 'Copilot request failed.');
+      return payload.answer;
+    }
+
+    function appendCopilotMessage(role, content) {
+      const panel = document.getElementById('copilotConversation');
+      if (!panel) return;
+      const item = document.createElement('div');
+      item.className = role === 'assistant'
+        ? 'rounded-lg bg-sky-950/60 border border-sky-500/20 p-2 text-[11px] text-slate-200 whitespace-pre-wrap'
+        : 'rounded-lg bg-slate-800/80 p-2 text-[11px] text-slate-200 whitespace-pre-wrap';
+      const label = document.createElement('div');
+      label.className = 'text-[9px] uppercase tracking-wider text-sky-400 mb-1 font-mono';
+      label.textContent = role === 'assistant' ? 'GravityCare Copilot' : (currentLang === 'fr' ? 'Vous' : 'You');
+      const body = document.createElement('div');
+      body.textContent = content;
+      item.append(label, body);
+      panel.appendChild(item);
+      panel.scrollTop = panel.scrollHeight;
+    }
+
+    function refreshCopilotContext() {
+      const astro = astronauts[currentAstroId] || {};
+      const crew = document.getElementById('copilotCrewName');
+      const scenario = document.getElementById('copilotScenario');
+      const language = document.getElementById('copilotLanguage');
+      if (crew) crew.textContent = astro.fullName || astro.shortName || currentAstroId;
+      if (scenario) scenario.textContent = currentScenario;
+      if (language) language.textContent = currentLang.toUpperCase();
+    }
+
+    function clearCopilotConversation() {
+      copilotHistory = [];
+      const panel = document.getElementById('copilotConversation');
+      if (panel) panel.innerHTML = '<div class="rounded-xl bg-sky-950/50 border border-sky-500/20 p-3 text-xs text-slate-200">Nouvelle conversation. Comment puis-je t’aider ?</div>';
+    }
+
+    async function runCopilotHealthAnalysis() {
+      const prompt = currentLang === 'fr'
+        ? "Analyse les constantes vitales simulées de l'astronaute sélectionné. Distingue les observations, les informations manquantes, les points à surveiller et les situations qui nécessitent une escalade vers le médecin de vol."
+        : "Analyze the selected astronaut's simulated vital signs. Distinguish observations, missing information, monitoring points, and situations requiring escalation to the flight surgeon.";
+      const input = document.getElementById('copilotChatInput');
+      if (input) input.value = prompt;
+      await sendCopilotMessage('analysis');
+    }
+
+    async function sendCopilotMessage(mode = 'chat') {
+      const input = document.getElementById('copilotChatInput');
+      const button = document.getElementById('copilotSendBtn');
+      const message = input.value.trim();
+      if (!message || button.disabled) return;
+      input.value = '';
+      button.disabled = true;
+      button.textContent = '...';
+      copilotHistory.push({ role: 'user', content: message });
+      appendCopilotMessage('user', message);
+      try {
+        const answer = await callGravityCareCopilot(mode, message, copilotHistory.slice(0, -1));
+        copilotHistory.push({ role: 'assistant', content: answer });
+        copilotHistory = copilotHistory.slice(-8);
+        appendCopilotMessage('assistant', answer);
+      } catch (error) {
+        appendCopilotMessage('assistant', error.message || 'Unable to contact Copilot.');
+      } finally {
+        button.disabled = false;
+        button.textContent = 'Send';
+        input.focus();
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const input = document.getElementById('copilotChatInput');
+      if (input) input.addEventListener('keydown', event => {
+        if (event.key === 'Enter') sendCopilotMessage();
+      });
+    });
+
+    async function parseSymptomLog() {
       const input = document.getElementById('symptomInput').value.trim();
       const out = document.getElementById('symptomParsedOutput');
-      const dict = i18n[currentLang];
       if (!input) return;
-
       out.classList.remove('hidden');
-      const lower = input.toLowerCase();
-      let tags = [];
-      let action = '';
-
-      if (lower.includes('vision') || lower.includes('blurred') || lower.includes('floue') || lower.includes('ocular') || lower.includes('glare')) {
-        tags = ['SANS_SCREENING', 'CEPHALIC_FLUID_SHIFT', 'OCT_PRIORITY'];
-        action = dict.nlpSansAction;
-      } else if (lower.includes('headache') || lower.includes('c\u00E9phal\u00E9e') || lower.includes('eva') || lower.includes('fatigue')) {
-        tags = ['POST_EVA_EXERTION', 'HYPERCAPNIA_CHECK', 'HYDRATION_DEFICIT'];
-        action = dict.nlpEvaAction;
-      } else {
-        tags = ['SUBJECTIVE_LOG_STRUCTURED', 'MED_GEMMA_TRIAGE', 'DSN_PACKET_READY'];
-        action = dict.nlpDefaultAction;
+      out.textContent = currentLang === 'fr' ? 'Analyse IA en cours...' : 'AI analysis in progress...';
+      try {
+        const answer = await callGravityCareCopilot('analysis', input);
+        out.textContent = answer;
+      } catch (error) {
+        out.textContent = error.message || 'Unable to analyze this symptom log.';
       }
-
-      out.innerHTML = `
-        <div class="text-sky-300 font-bold mb-1">${dict.nlpHeader}</div>
-        <div class="flex flex-wrap gap-1 mb-1.5">
-          ${tags.map(t => `<span class="px-1.5 py-0.5 rounded bg-sky-500/20 text-sky-300 text-[10px]">#${t}</span>`).join('')}
-        </div>
-        <div class="text-slate-300">${action}</div>
-      `;
     }
 
     // --- QUICK SANS OCULAR CHECK ---
@@ -2744,6 +2917,6 @@
       animateEcg();
     };
   </script>
-  <script src="/js/client.js"></script>
+  <script src="/js/client.js?v=cf729cb"></script>
 </body>
 </html>

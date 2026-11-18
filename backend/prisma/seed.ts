@@ -17,6 +17,12 @@ function at(daysAgo: number, hour = 12): Date {
 }
 
 async function main() {
+  const existingUsers = await prisma.user.count();
+  if (existingUsers > 0) {
+    console.log(`Seed skipped: database already contains ${existingUsers} user(s).`);
+    return;
+  }
+
   console.log('Seeding fictional GravityCare demo data...');
 
   await prisma.syncOperation.deleteMany();

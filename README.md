@@ -1,8 +1,10 @@
 # GravityCare — Orbital Medical OS
 
-Public demo: https://brain-belts-restored-generous.trycloudflare.com
+## Public demo
 
-Password for every demo account: `demo1234`. This address stays online while the demo computer is running.
+**Live application:** https://gravitycare.onrender.com/
+
+Demo password for every account: `demo1234`.
 
 Fictional health-monitoring prototype for the NASA Space Apps Challenge. It follows one crewmember at a time: profile, measurements, nutrition, alerts, a written analysis, and a simulated physician channel.
 
@@ -17,8 +19,9 @@ This is not a medical device. It does not diagnose, prescribe, or use real medic
 - Nutrition targets change with the person. Missing age, height, mass, sex, or activity produces no energy number.
 - Foods that conflict with a recorded allergy or intolerance are removed. The planner does not invent foods that are not on the mission menu.
 - A critical screening result is saved as sent to the physician before the written analysis finishes.
-- The written analysis is a rule engine. An external model is used only when `AI_API_KEY` and `AI_BASE_URL` are set on the server. If that call fails, the rules still answer.
-- The browser never receives an API key.
+- Alert reports use the built-in rule engine and can optionally use an external model when `AI_API_KEY` and `AI_BASE_URL` are configured server-side.
+- The cockpit Copilot supports multi-turn chat and symptom analysis through the server-side Google Gemini API. It receives only the synthetic snapshot shown in the cockpit; database alert reports continue to use the authenticated, role-scoped backend workflow.
+- The browser never receives an API key. The public demo Copilot endpoint has a basic per-IP rate limit; configure API spend limits before sharing the demo widely.
 
 The cockpit, ECG drawing, body map, and solar / CO2 buttons are a scripted visual simulator. Numbers on that cockpit are not the database. Nutrition, alerts, messages, ground, and admin screens are the database.
 
@@ -52,6 +55,22 @@ Demo password for every account: `demo1234`
 
 All four crewmembers are fictional and assigned to the flight surgeon.
 
+## Free deployment (Render + Neon)
+
+The application is deployed as one Node/Express service: Express serves both the API and `public/index.html`. The old `frontend/` Vite template is not deployed separately.
+
+1. Create a free PostgreSQL project on Neon and copy its pooled connection string. Keep `sslmode=require` in the URL.
+2. In Render, choose **New > Blueprint** and select this repository. Render reads the root `render.yaml` file.
+3. When prompted, provide the Neon connection string as `DATABASE_URL`. Render generates `JWT_SECRET` automatically.
+4. To enable the Copilot, create a Gemini API key in [Google AI Studio](https://aistudio.google.com/apikey), then set `AI_PROVIDER=gemini`, `AI_API_KEY` to that key, `AI_MODEL=gemini-3.8-flash`, and `AI_FALLBACK_MODEL=gemini-3.5-flash-lite` in Render's server-side Environment settings. Keep the key out of GitHub and the browser. Gemini's free tier has model-specific rate limits and Google may use free-tier submitted content to improve its products; use synthetic demonstration data only. If the primary model returns a temporary 503 overload, the Copilot automatically tries the fallback model once. Without a key, alert analysis falls back to the built-in rules and the Copilot chat returns a configuration message.
+5. Deploy. The build generates Prisma Client, compiles TypeScript, creates/updates the PostgreSQL schema, and seeds the fictional demo records only when the database has no users.
+
+The seed operation is guarded: subsequent deployments will not delete or replace existing user data. To intentionally recreate the demo dataset, clear the database yourself before deploying; this deletes all records.
+
+Render's free web service may sleep after inactivity, and its local filesystem is temporary. PostgreSQL on Neon is therefore used instead of a local SQLite file. Free hosting is suitable for a demonstration, not a production medical service.
+
+After deployment, verify `https://YOUR-SERVICE.onrender.com/api/health`.
+
 ## Checks
 
 ```bash
@@ -71,6 +90,7 @@ backend/src/vitals        measurements and alert creation
 backend/src/alerts        screening rules and alert lifecycle
 backend/src/nutrition     personal planner and menu
 backend/src/ai            rule analysis, optional external model
+backend/src/copilot      Gemini-powered chat and symptom analysis
 backend/src/messages      simulated crew–physician channel and offline sync
 backend/src/admin         accounts, missions, security log
 public/index.html         interface, including the original cockpit
