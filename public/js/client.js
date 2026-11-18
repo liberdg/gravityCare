@@ -266,15 +266,103 @@
   }
 
   async function loadGround() {
-    const lang = currentLang === 'fr' ? 'fr' : 'en';
-    const crew = await api('/api/astronauts');
-    const alerts = await api(`/api/alerts?lang=${lang}`);
-    const day = currentLang === 'fr' ? 'jour' : 'day';
-    const none = currentLang === 'fr' ? 'aucune' : 'none';
-    document.getElementById('groundBody').innerHTML = `
-      <div class="grid md:grid-cols-2 gap-3">${crew.map(member => `<div class="rounded-xl border border-slate-800 p-3"><div class="font-bold">${esc(member.callSign)}</div><div class="text-xs text-slate-400">${esc(member.mission?.name || '')} · ${day} ${esc(member.missionDay)}</div><div class="text-xs mt-1">${esc(t('openAlerts'))}: ${esc(member.alertSummary?.openCount)} · ${currentLang === 'fr' ? 'niveau' : 'highest'} ${esc(statusLabel(member.alertSummary?.highest) || none)}</div></div>`).join('')}</div>
-      <h3 class="mt-4 font-display">${esc(t('alertsTitle'))}</h3>
-      <ul class="mt-2 text-sm">${alerts.map(alert => `<li>${esc(statusLabel(alert.severity))} · ${esc(alert.callSign || '')} · ${esc(alert.title)}</li>`).join('')}</ul>`;
+    const host = document.getElementById('groundBody');
+    if (!host) return;
+    const fr = currentLang === 'fr';
+    const lang = fr ? 'fr' : 'en';
+    host.innerHTML = `<div class="glass-card rounded-2xl p-5 text-sm text-slate-400">${fr ? 'Actualisation de la situation de mission…' : 'Refreshing mission picture…'}</div>`;
+    try {
+      const [crew, alerts] = await Promise.all([
+        api('/api/astronauts'),
+        api(`/api/alerts?lang=${lang}`)
+      ]);
+      const rank = { CRITICAL: 4, WARNING: 3, WATCH: 2, INFO: 1 };
+      const openAlerts = alerts.filter(alert => alert.status !== 'RESOLVED');
+      const critical = openAlerts.filter(alert => alert.severity === 'CRITICAL').length;
+      const attention = openAlerts.filter(alert => alert.severity === 'WARNING' || alert.severity === 'WATCH').length;
+      const stable = crew.filter(member => !member.alertSummary?.openCount).length;
+      const stamp = new Date().toLocaleTimeString(fr ? 'fr-FR' : 'en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      const refreshLabel = fr ? `Dernière actualisation · ${stamp}` : `Last refresh · ${stamp}`;
+      const refreshNode = document.getElementById('groundLastRefresh');
+      if (refreshNode) refreshNode.textContent = refreshLabel;
+      const statCard = (label, value, color, detail) => `
+        <article class="glass-card rounded-2xl p-4 border-l-2 ${color}">
+          <p class="text-[10px] font-mono uppercase tracking-widest text-slate-400">${esc(label)}</p>
+          <div class="font-display text-3xl font-bold text-white mt-2 tabular-nums">${value}</div>
+          <p class="text-[11px] text-slate-500 mt-1">${esc(detail)}</p>
+        </article>`;
+      const stateMeta = (member) => {
+        const level = member.alertSummary?.highest;
+        if (level === 'CRITICAL') return { label: fr ? 'Critique' : 'Critical', cls: 'text-red-300 bg-red-500/10 border-red-400/30', dot: 'bg-red-400' };
+        if (level === 'WARNING') return { label: fr ? 'Alerte' : 'Warning', cls: 'text-orange-300 bg-orange-500/10 border-orange-400/30', dot: 'bg-orange-400' };
+        if (level === 'WATCH') return { label: fr ? 'Surveillance' : 'Watch', cls: 'text-amber-300 bg-amber-500/10 border-amber-400/30', dot: 'bg-amber-400' };
+        return { label: fr ? 'Aucune alerte ouverte' : 'No open alert', cls: 'text-emerald-300 bg-emerald-500/10 border-emerald-400/30', dot: 'bg-emerald-400' };
+      };
+      const crewCards = crew.map(member => {
+        const meta = stateMeta(member);
+        const mission = member.mission?.name || (fr ? 'Mission non renseignée' : 'Mission not specified');
+        const missionCode = member.mission?.code || '—';
+        const openCount = member.alertSummary?.openCount || 0;
+        return `<article class="rounded-2xl border border-slate-800 bg-slate-950/65 p-4 hover:border-sky-400/30 transition-colors">
+          <div class="flex items-start justify-between gap-3">
+            <div class="flex items-center gap-3 min-w-0">
+              <div class="h-11 w-11 shrink-0 rounded-xl border border-sky-400/25 bg-sky-500/10 grid place-items-center font-display font-bold text-sky-200">${esc(String(member.callSign || '—').split(/[^A-Za-z0-9]/).filter(Boolean).map(part => part[0]).join('').slice(0,2) || 'CR')}</div>
+              <div class="min-w-0"><h3 class="font-display font-bold text-white truncate">${esc(member.callSign)}</h3><p class="text-[10px] font-mono text-slate-500">${esc(member.agency || '—')} · ${esc(missionCode)}</p></div>
+            </div>
+            <span class="shrink-0 rounded-full border px-2 py-1 text-[9px] font-mono uppercase ${meta.cls}"><span class="inline-block h-1.5 w-1.5 rounded-full ${meta.dot} mr-1"></span>${esc(meta.label)}</span>
+          </div>
+          <div class="mt-4 grid grid-cols-2 gap-3 border-t border-slate-800 pt-3">
+            <div><p class="text-[9px] font-mono uppercase text-slate-500">${fr ? 'Jour de mission' : 'Mission day'}</p><p class="text-sm font-semibold text-slate-200 mt-1">${esc(member.missionDay ?? '—')}</p></div>
+            <div><p class="text-[9px] font-mono uppercase text-slate-500">${fr ? 'Alertes ouvertes' : 'Open alerts'}</p><p class="text-sm font-semibold ${openCount ? 'text-amber-300' : 'text-emerald-300'} mt-1">${openCount}</p></div>
+          </div>
+          <p class="text-[10px] text-slate-500 mt-3 truncate">${esc(mission)}</p>
+        </article>`;
+      }).join('');
+      const orderedAlerts = [...openAlerts].sort((a,b) => (rank[b.severity] || 0) - (rank[a.severity] || 0) || new Date(b.createdAt) - new Date(a.createdAt));
+      const alertRows = orderedAlerts.map(alert => {
+        const color = alert.severity === 'CRITICAL' ? 'text-red-300 border-red-400/20 bg-red-500/5' : alert.severity === 'WARNING' ? 'text-orange-300 border-orange-400/20 bg-orange-500/5' : alert.severity === 'WATCH' ? 'text-amber-300 border-amber-400/20 bg-amber-500/5' : 'text-sky-300 border-sky-400/20 bg-sky-500/5';
+        const date = alert.createdAt ? new Date(alert.createdAt).toLocaleString(fr ? 'fr-FR' : 'en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : '—';
+        return `<article class="grid grid-cols-[auto_1fr] sm:grid-cols-[auto_1fr_auto] items-start gap-3 rounded-xl border ${color} p-3">
+          <span class="mt-1 h-2.5 w-2.5 rounded-full ${alert.severity === 'CRITICAL' ? 'bg-red-400' : alert.severity === 'WARNING' ? 'bg-orange-400' : alert.severity === 'WATCH' ? 'bg-amber-400' : 'bg-sky-400'}"></span>
+          <div class="min-w-0"><div class="flex flex-wrap items-center gap-2"><strong class="text-xs text-white">${esc(alert.callSign || (fr ? 'Équipage' : 'Crew'))}</strong><span class="text-[9px] font-mono uppercase">${esc(statusLabel(alert.severity))}</span></div><p class="text-xs text-slate-300 mt-1">${esc(alert.title)}</p><p class="text-[10px] text-slate-500 mt-1">${esc(statusLabel(alert.status))}</p></div>
+          <time class="col-span-2 sm:col-span-1 text-[10px] font-mono text-slate-500 sm:text-right">${esc(date)}</time>
+        </article>`;
+      }).join('');
+      host.innerHTML = `
+        <div class="grid grid-cols-2 xl:grid-cols-4 gap-3">
+          ${statCard(fr ? 'Équipage suivi' : 'Crew monitored', crew.length, 'border-sky-400/60', fr ? 'Membres dans le périmètre opérationnel' : 'Members in operational scope')}
+          ${statCard(fr ? 'Sans alerte ouverte' : 'No open alerts', stable, 'border-emerald-400/60', fr ? 'Aucun signalement non résolu' : 'No unresolved reports')}
+          ${statCard(fr ? 'À surveiller' : 'Needs attention', attention, 'border-amber-400/60', fr ? 'Niveaux WATCH et WARNING' : 'WATCH and WARNING levels')}
+          ${statCard(fr ? 'Critiques' : 'Critical', critical, 'border-red-400/60', fr ? 'À transmettre selon le protocole' : 'Escalate per mission protocol')}
+        </div>
+        <section class="glass-card rounded-2xl p-4 sm:p-5">
+          <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-3 mb-4">
+            <div><p class="text-[10px] font-mono uppercase tracking-widest text-sky-300">${fr ? 'ÉTAT DE L’ÉQUIPAGE' : 'CREW STATUS'}</p><h3 class="font-display text-lg font-bold text-white mt-1">${fr ? 'Vue opérationnelle des astronautes' : 'Astronaut operational overview'}</h3><p class="text-[11px] text-slate-500 mt-1">${fr ? 'Identifiant de mission, jour de mission et niveau d’alerte uniquement.' : 'Mission identifier, mission day and alert level only.'}</p></div>
+            <label class="text-[10px] font-mono text-slate-400">${fr ? 'RECHERCHER' : 'SEARCH'}<input id="groundCrewSearch" type="search" placeholder="${fr ? 'Rechercher un indicatif…' : 'Search call sign…'}" class="block mt-1 w-full sm:w-56 rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-white outline-none focus:border-sky-400"></label>
+          </div>
+          <div id="groundCrewGrid" class="grid md:grid-cols-2 xl:grid-cols-4 gap-3">${crewCards || `<p class="text-sm text-slate-400">${fr ? 'Aucun membre d’équipage.' : 'No crew members.'}</p>`}</div>
+        </section>
+        <section class="glass-card rounded-2xl p-4 sm:p-5">
+          <div class="flex items-center justify-between gap-3 mb-4"><div><p class="text-[10px] font-mono uppercase tracking-widest text-amber-300">${fr ? 'FILE OPÉRATIONNELLE' : 'OPERATIONS QUEUE'}</p><h3 class="font-display text-lg font-bold text-white mt-1">${fr ? 'Alertes non résolues' : 'Unresolved alerts'}</h3></div><span class="rounded-full bg-slate-800 px-2.5 py-1 text-[10px] font-mono text-slate-300">${openAlerts.length} ${fr ? 'OUVERTE(S)' : 'OPEN'}</span></div>
+          <div class="space-y-2">${alertRows || `<div class="rounded-xl border border-emerald-400/20 bg-emerald-500/5 p-4 text-xs text-emerald-300">${fr ? 'Aucune alerte non résolue dans la file opérationnelle.' : 'No unresolved alerts in the operations queue.'}</div>`}</div>
+        </section>
+        <p class="text-[10px] text-slate-600 px-1">${fr ? 'Cette vue est volontairement limitée aux informations opérationnelles. Les constantes vitales, diagnostics, traitements et antécédents restent réservés au personnel médical autorisé.' : 'This view is intentionally limited to operational information. Vital signs, diagnoses, treatments and medical history remain restricted to authorized medical staff.'}</p>`;
+      const search = document.getElementById('groundCrewSearch');
+      if (search) search.addEventListener('input', () => {
+        const query = search.value.trim().toLowerCase();
+        host.querySelectorAll('#groundCrewGrid article').forEach(card => {
+          card.classList.toggle('hidden', !card.textContent.toLowerCase().includes(query));
+        });
+      });
+      const refreshButton = document.getElementById('groundRefreshBtn');
+      if (refreshButton && !refreshButton.dataset.wired) {
+        refreshButton.dataset.wired = '1';
+        refreshButton.addEventListener('click', () => loadGround().catch(error => console.error(error)));
+      }
+    } catch (error) {
+      console.error('[ground] Unable to load mission picture:', error);
+      host.innerHTML = `<div class="rounded-2xl border border-red-400/30 bg-red-500/5 p-4 text-sm text-red-200">${fr ? 'Impossible de charger la situation de mission. Vérifie la connexion puis actualise.' : 'Unable to load the mission picture. Check the connection and refresh.'}</div>`;
+    }
   }
 
   async function loadAdmin() {
