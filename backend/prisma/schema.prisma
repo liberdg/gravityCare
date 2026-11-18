@@ -28,6 +28,7 @@ model User {
   doctorAssignments DoctorAssignment[] @relation("DoctorAssignments")
   reviewedPlans    NutritionPlan[]    @relation("PlanReviewer")
   auditLogs        AuditLog[]
+  authoredHealthLogs CrewHealthLog[] @relation("HealthLogAuthor")
 }
 
 model Mission {
@@ -81,6 +82,7 @@ model AstronautProfile {
   assignments    DoctorAssignment[]
   nutritionPlans NutritionPlan[]
   reports        HealthReport[]
+  healthLogs     CrewHealthLog[]
 }
 
 model DoctorAssignment {
@@ -269,4 +271,25 @@ model SyncOperation {
   createdAt DateTime @default(now())
 
   @@unique([userId, clientId])
+}
+
+
+model CrewHealthLog {
+  id           String   @id @default(cuid())
+  astronautId  String
+  authorId     String
+  domain       String
+  metric       String
+  numericValue Float?
+  textValue    String?
+  unit         String?
+  notes        String?
+  source       String   @default("SELF_REPORTED")
+  recordedAt   DateTime @default(now())
+  createdAt    DateTime @default(now())
+
+  astronaut AstronautProfile @relation(fields: [astronautId], references: [id])
+  author    User             @relation("HealthLogAuthor", fields: [authorId], references: [id])
+
+  @@index([astronautId, domain, recordedAt])
 }
