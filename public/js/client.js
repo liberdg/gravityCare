@@ -70,6 +70,7 @@
     sessionStorage.removeItem(TOKEN_KEY);
     state.token = null;
     state.user = null;
+    if (typeof window.gcSetAlertAudioRole === 'function') window.gcSetAlertAudioRole(null);
     if (alertWatch) {
       clearInterval(alertWatch);
       alertWatch = null;
@@ -101,6 +102,7 @@
   }
 
   function applyRole() {
+    if (typeof window.gcSetAlertAudioRole === 'function') window.gcSetAlertAudioRole(state.user?.role);
     labelNav();
     const localIds = state.crew.map(member => CALL_TO_LOCAL[member.callSign]).filter(Boolean);
     window.GC_ALLOWED_LOCAL_IDS = null;
