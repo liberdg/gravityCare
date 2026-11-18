@@ -52,6 +52,22 @@ Demo password for every account: `demo1234`
 
 All four crewmembers are fictional and assigned to the flight surgeon.
 
+## Free deployment (Render + Neon)
+
+The application is deployed as one Node/Express service: Express serves both the API and `public/index.html`. The old `frontend/` Vite template is not deployed separately.
+
+1. Create a free PostgreSQL project on Neon and copy its pooled connection string. Keep `sslmode=require` in the URL.
+2. In Render, choose **New > Blueprint** and select this repository. Render reads the root `render.yaml` file.
+3. When prompted, provide the Neon connection string as `DATABASE_URL`. Render generates `JWT_SECRET` automatically.
+4. Optionally set `AI_API_KEY`, `AI_BASE_URL`, and `AI_MODEL` in Render to enable an external AI provider. Leave them empty to use the built-in rules engine.
+5. Deploy. The build generates Prisma Client, compiles TypeScript, creates/updates the PostgreSQL schema, and seeds the fictional demo records only when the database has no users.
+
+The seed operation is guarded: subsequent deployments will not delete or replace existing user data. To intentionally recreate the demo dataset, clear the database yourself before deploying; this deletes all records.
+
+Render's free web service may sleep after inactivity, and its local filesystem is temporary. PostgreSQL on Neon is therefore used instead of a local SQLite file. Free hosting is suitable for a demonstration, not a production medical service.
+
+After deployment, verify `https://YOUR-SERVICE.onrender.com/api/health`.
+
 ## Checks
 
 ```bash
