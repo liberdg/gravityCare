@@ -104,6 +104,12 @@
       transition: stroke-dashoffset 0.6s cubic-bezier(0.22, 1, 0.36, 1), stroke 0.4s ease;
     }
 
+    .anatomy-zone { cursor:pointer; outline:none; }
+    .anatomy-zone:hover .hotspot-core,.anatomy-zone:focus .hotspot-core { r:9; filter:drop-shadow(0 0 7px #38bdf8); }
+    .anatomy-zone:focus .zone-glow { stroke:#e0f2fe; stroke-width:2; }
+    .health-metric { background:rgba(2,6,23,.72); border:1px solid rgba(51,65,85,.8); border-radius:.8rem; padding:.75rem; min-width:0; }
+    .health-bar { height:7px; border-radius:999px; background:#1e293b; overflow:hidden; }
+    .health-bar>span { display:block; height:100%; border-radius:999px; background:linear-gradient(90deg,#0ea5e9,#34d399); }
     .body-hotspot {
       cursor: pointer;
       transition: all 0.25s ease;
