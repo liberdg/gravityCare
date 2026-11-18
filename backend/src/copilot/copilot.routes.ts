@@ -111,7 +111,7 @@ copilotRouter.post('/chat', async (req: Request, res: Response) => {
 
       if (upstream.status === 401) {
         res.status(502).json({ error: 'Clé API OpenAI refusée. Vérifie AI_API_KEY dans Render.' });
-      } else if (upstream.status === 429 && (providerCode.includes('insufficient_quota') || providerCode.includes('billing') || providerCode.includes('quota'))) {
+      } else if (upstream.status === 429 && (providerCode.includes('insufficient_quota') || providerCode.includes('credit_balance_exhausted') || providerCode.includes('spend_limit_exceeded') || providerCode.includes('usage_limit_exceeded') || providerCode.includes('billing') || providerCode.includes('quota'))) {
         res.status(503).json({ error: 'Crédit API OpenAI épuisé ou budget mensuel atteint. Ajoute un moyen de paiement ou augmente le budget sur OpenAI Platform > Billing, puis réessaie.' });
       } else if (upstream.status === 429) {
         res.setHeader('Retry-After', '30');
