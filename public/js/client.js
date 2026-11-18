@@ -9,8 +9,8 @@
     'MS-2. Tremblay': 'tremblay'
   };
   const TABS = {
-    ASTRONAUT: [['cockpit', 'navMyDash'], ['crew', 'navMyFile'], ['nutrition', 'navNutrition'], ['alerts', 'navAlerts'], ['messages', 'navMessages']],
-    DOCTOR: [['ward', 'navWard'], ['crew', 'navClinical'], ['nutrition', 'navNutrition'], ['alerts', 'navAlerts'], ['messages', 'navMessages']],
+    ASTRONAUT: [['cockpit', 'navMyDash'], ['copilot', 'Copilot'], ['crew', 'navMyFile'], ['nutrition', 'navNutrition'], ['alerts', 'navAlerts'], ['messages', 'navMessages']],
+    DOCTOR: [['ward', 'navWard'], ['copilot', 'Copilot'], ['crew', 'navClinical'], ['nutrition', 'navNutrition'], ['alerts', 'navAlerts'], ['messages', 'navMessages']],
     GROUND_CREW: [['ground', 'navGround'], ['alerts', 'navAlerts']],
     ADMIN: [['admin', 'navAdmin']]
   };
@@ -214,7 +214,10 @@
     try {
       const alerts = await api('/api/alerts');
       if (typeof window.gcSetRecordAlert === 'function') {
-        window.gcSetRecordAlert(alerts.some(alertIsHot));
+        const ownAstronautAlert = state.user?.role === 'ASTRONAUT'
+          && Boolean(state.user.astronautProfileId)
+          && alerts.some(alert => alert.astronautId === state.user.astronautProfileId && alertIsHot(alert));
+        window.gcSetRecordAlert(ownAstronautAlert);
       }
     } catch (error) {
       console.error(error);
@@ -225,7 +228,10 @@
     const lang = currentLang === 'fr' ? 'fr' : 'en';
     const alerts = await api(`/api/alerts?lang=${lang}`);
     if (typeof window.gcSetRecordAlert === 'function') {
-      window.gcSetRecordAlert(alerts.some(alertIsHot));
+      const ownAstronautAlert = state.user?.role === 'ASTRONAUT'
+        && Boolean(state.user.astronautProfileId)
+        && alerts.some(alert => alert.astronautId === state.user.astronautProfileId && alertIsHot(alert));
+      window.gcSetRecordAlert(ownAstronautAlert);
     }
     const host = document.getElementById('alertsBody');
     if (!alerts.length) {
