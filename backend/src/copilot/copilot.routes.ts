@@ -104,14 +104,23 @@ copilotRouter.post('/chat', async (req: Request, res: Response) => {
 
     if (!upstream.ok) {
       const detail = await upstream.text();
-      console.error('[copilot] OpenAI request failed:', upstream.status, detail.slice(0, 500));
-      res.status(upstream.status === 429 ? 429 : 502).json({
-        error: upstream.status === 401
-          ? 'OpenAI rejected the API key. Check AI_API_KEY in Render.'
-          : upstream.status === 429
-            ? 'OpenAI quota or rate limit reached. Check API billing and usage.'
-            : 'The AI provider could not complete the request. Check Render logs.'
-      });
+      let providerError: any = {};
+      try { providerError = JSON.parse(detail)?.error ?? {}; } catch { /* provider returned non-JSON */ }
+      const providerCode = String(providerError.code || providerError.type || '').toLowerCase();
+      console.error('[copilot] OpenAI request failed:', upstream.status, providerCode, detail.slice(0, 500));
+
+      if (upstream.status === 401) {
+        res.status(502).json({ error: 'Clé API OpenAI refusée. Vérifie AI_API_KEY dans Render.' });
+      } else if (upstream.status === 429 && (providerCode.includes('insufficient_quota') || providerCode.includes('billing') || providerCode.includes('quota'))) {
+        res.status(503).json({ error: 'Crédit API OpenAI épuisé ou budget mensuel atteint. Ajoute un moyen de paiement ou augmente le budget sur OpenAI Platform > Billing, puis réessaie.' });
+      } else if (upstream.status === 429) {
+        res.setHeader('Retry-After', '30');
+        res.status(429).json({ error: 'Limite temporaire de requêtes OpenAI atteinte. Attends 30 secondes puis réessaie.' });
+      } else if (upstream.status === 404 || providerCode.includes('model_not_found')) {
+        res.status(502).json({ error: 'Modèle OpenAI indisponible pour cette clé. Vérifie AI_MODEL dans Render.' });
+      } else {
+        res.status(502).json({ error: 'Le fournisseur IA n’a pas pu traiter la demande. Consulte les journaux Render pour le détail.' });
+      }
       return;
     }
 
