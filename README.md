@@ -17,8 +17,9 @@ This is not a medical device. It does not diagnose, prescribe, or use real medic
 - Nutrition targets change with the person. Missing age, height, mass, sex, or activity produces no energy number.
 - Foods that conflict with a recorded allergy or intolerance are removed. The planner does not invent foods that are not on the mission menu.
 - A critical screening result is saved as sent to the physician before the written analysis finishes.
-- The written analysis is a rule engine. An external model is used only when `AI_API_KEY` and `AI_BASE_URL` are set on the server. If that call fails, the rules still answer.
-- The browser never receives an API key.
+- Alert reports use the built-in rule engine and can optionally use an external model when `AI_API_KEY` and `AI_BASE_URL` are configured server-side.
+- The cockpit Copilot supports multi-turn chat and symptom analysis through the server-side OpenAI Responses API. It receives only the synthetic snapshot shown in the cockpit; database alert reports continue to use the authenticated, role-scoped backend workflow.
+- The browser never receives an API key. The public demo Copilot endpoint has a basic per-IP rate limit; configure API spend limits before sharing the demo widely.
 
 The cockpit, ECG drawing, body map, and solar / CO2 buttons are a scripted visual simulator. Numbers on that cockpit are not the database. Nutrition, alerts, messages, ground, and admin screens are the database.
 
@@ -59,7 +60,7 @@ The application is deployed as one Node/Express service: Express serves both the
 1. Create a free PostgreSQL project on Neon and copy its pooled connection string. Keep `sslmode=require` in the URL.
 2. In Render, choose **New > Blueprint** and select this repository. Render reads the root `render.yaml` file.
 3. When prompted, provide the Neon connection string as `DATABASE_URL`. Render generates `JWT_SECRET` automatically.
-4. Optionally set `AI_API_KEY`, `AI_BASE_URL`, and `AI_MODEL` in Render to enable an external AI provider. Leave them empty to use the built-in rules engine.
+4. To enable the Copilot, set `AI_API_KEY` to your OpenAI secret key, `AI_BASE_URL` to `https://api.openai.com/v1`, and `AI_MODEL` to `gpt-4o-mini` in Render's server-side Environment settings. Keep the key out of GitHub and the browser. Without a key, alert analysis falls back to the built-in rules and the Copilot chat returns a configuration message.
 5. Deploy. The build generates Prisma Client, compiles TypeScript, creates/updates the PostgreSQL schema, and seeds the fictional demo records only when the database has no users.
 
 The seed operation is guarded: subsequent deployments will not delete or replace existing user data. To intentionally recreate the demo dataset, clear the database yourself before deploying; this deletes all records.
@@ -87,6 +88,7 @@ backend/src/vitals        measurements and alert creation
 backend/src/alerts        screening rules and alert lifecycle
 backend/src/nutrition     personal planner and menu
 backend/src/ai            rule analysis, optional external model
+backend/src/copilot      OpenAI-powered chat and symptom analysis
 backend/src/messages      simulated crew–physician channel and offline sync
 backend/src/admin         accounts, missions, security log
 public/index.html         interface, including the original cockpit
