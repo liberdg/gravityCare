@@ -101,59 +101,90 @@ copilotRouter.post('/chat', async (req: Request, res: Response) => {
     }
   ];
 
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 30_000);
-  try {
-    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`;
-    const upstream = await fetch(endpoint, {
-      method: 'POST',
-      signal: controller.signal,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        systemInstruction: { parts: [{ text: instructions }] },
-        contents,
-        generationConfig: { maxOutputTokens: 700, temperature: 0.4 }
-      })
-    });
+  const fallbackModel = process.env.AI_FALLBACK_MODEL || 'gemini-3.5-flash-lite';
+  const modelsToTry = [model, ...(fallbackModel !== model ? [fallbackModel] : [])];
+  let answer = '';
+  let usedModel = model;
+  let lastStatus = 502;
 
-    const payload: any = await upstream.json().catch(() => ({}));
-    if (!upstream.ok) {
+  for (let index = 0; index < modelsToTry.length; index += 1) {
+    const currentModel = modelsToTry[index];
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 12_000);
+    try {
+      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(currentModel)}:generateContent?key=${encodeURIComponent(apiKey)}`;
+      const upstream = await fetch(endpoint, {
+        method: 'POST',
+        signal: controller.signal,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          systemInstruction: { parts: [{ text: instructions }] },
+          contents,
+          generationConfig: { maxOutputTokens: 700, temperature: 0.4 }
+        })
+      });
+
+      const payload: any = await upstream.json().catch(() => ({}));
+      if (upstream.ok) {
+        answer = extractGeminiText(payload);
+        usedModel = currentModel;
+        if (!answer) {
+          const reason = String(payload?.candidates?.[0]?.finishReason || '');
+          res.status(502).json({
+            error: reason === 'SAFETY'
+              ? 'Gemini a bloqué cette demande pour des raisons de sécurité. Reformule ta question.'
+              : 'Gemini a renvoyé une réponse vide. Réessaie avec une demande plus courte.'
+          });
+          return;
+        }
+        break;
+      }
+
+      lastStatus = upstream.status;
       const providerMessage = getProviderError(payload);
-      console.error('[copilot] Gemini request failed:', upstream.status, providerMessage.slice(0, 300));
+      console.error('[copilot] Gemini request failed:', upstream.status, currentModel, providerMessage.slice(0, 300));
+
+      // A 503 indicates temporary overload: try the configured fallback model once.
+      if (upstream.status === 503 && index < modelsToTry.length - 1) continue;
 
       if (upstream.status === 400 || upstream.status === 403) {
         res.status(502).json({ error: 'La clé Gemini ou le modèle est refusé. Vérifie AI_API_KEY et AI_MODEL dans Render.' });
       } else if (upstream.status === 429) {
         res.setHeader('Retry-After', '30');
-        const quota = /quota|resource_exhausted|billing|limit:\s*0/.test(providerMessage);
+        const quota = /quota|resource_exhausted|billing|limit:\\s*0/.test(providerMessage);
         res.status(quota ? 503 : 429).json({
           error: quota
-            ? 'Le quota gratuit Gemini est atteint pour le moment. Consulte les limites du projet dans Google AI Studio, puis réessaie lorsque le quota sera réinitialisé.'
+            ? 'Le quota Gemini est atteint. Consulte les limites du projet dans Google AI Studio avant de réessayer.'
             : 'Gemini reçoit trop de demandes. Attends 30 secondes puis réessaie.'
         });
+      } else if (upstream.status === 503) {
+        res.setHeader('Retry-After', '30');
+        res.status(503).json({ error: 'Les modèles Gemini sont momentanément surchargés, y compris le modèle de secours. Attends 30 secondes puis réessaie.' });
       } else if (upstream.status === 404) {
-        res.status(502).json({ error: 'Modèle Gemini introuvable. Vérifie le nom indiqué dans AI_MODEL sur Render.' });
+        res.status(502).json({ error: `Modèle Gemini introuvable (${currentModel}). Vérifie AI_MODEL et AI_FALLBACK_MODEL dans Render.` });
       } else {
         res.status(502).json({ error: 'Gemini n’a pas pu traiter la demande. Consulte les journaux Render pour le détail.' });
       }
       return;
-    }
-
-    const answer = extractGeminiText(payload);
-    if (!answer) {
-      const reason = String(payload?.candidates?.[0]?.finishReason || '');
-      res.status(502).json({
-        error: reason === 'SAFETY'
-          ? 'Gemini a bloqué cette demande pour des raisons de sécurité. Reformule ta question.'
-          : 'Gemini a renvoyé une réponse vide. Réessaie avec une demande plus courte.'
-      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'unknown error';
+      console.error('[copilot] Gemini connection error:', currentModel, message);
+      if (index < modelsToTry.length - 1) continue;
+      res.status(502).json({ error: 'Impossible de joindre les modèles Gemini. Vérifie la connexion réseau et réessaie.' });
       return;
+    } finally {
+      clearTimeout(timeout);
     }
-    res.json({ answer, mode, model, provider: 'gemini', disclaimer: 'Démonstration fictive uniquement — ne constitue pas un diagnostic médical.' });
-  } catch (error) {
-    console.error('[copilot] Gemini connection error:', error instanceof Error ? error.message : 'unknown error');
-    res.status(502).json({ error: 'Impossible de joindre Gemini. Vérifie la connexion réseau et les journaux Render.' });
-  } finally {
-    clearTimeout(timeout);
   }
+
+  if (!answer) {
+    res.status(lastStatus === 503 ? 503 : 502).json({
+      error: lastStatus === 503
+        ? 'Gemini est momentanément surchargé. Le modèle principal et le modèle de secours sont indisponibles pour le moment. Réessaie dans quelques instants.'
+        : 'Le Copilot n’a pas pu obtenir de réponse. Consulte les journaux Render.'
+    });
+    return;
+  }
+
+  res.json({ answer, mode, model: usedModel, provider: 'gemini', fallbackUsed: usedModel !== model, disclaimer: 'Démonstration fictive uniquement — ne constitue pas un diagnostic médical.' });
 });
