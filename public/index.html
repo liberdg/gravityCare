@@ -2344,7 +2344,8 @@
         if (panel) panel.textContent = currentLang === 'fr' ? 'Historique indisponible pour cette session.' : 'History unavailable for this session.';
         return;
       }
-      const callSign = Object.keys(CALL_TO_LOCAL).find(key => CALL_TO_LOCAL[key] === astro.id);
+      const localCallSigns = { vance: 'CDR. Vance', chen: 'PLT. Chen', diallo: 'Dr. Diallo', tremblay: 'MS-2. Tremblay' };
+      const callSign = localCallSigns[astro.id];
       const profile = window.GC_MEDICAL_CREW.find(item => item.callSign === callSign);
       if (!profile) {
         panel.textContent = currentLang === 'fr' ? 'Profil médical non accessible avec ce rôle.' : 'Medical profile not accessible for this role.';
@@ -2951,7 +2952,13 @@
       document.getElementById('vital-hrv').textContent = hrv;
       document.getElementById('vital-bp').textContent = astro.bp;
       document.getElementById('vital-glucose').textContent = astro.glucose;
-      document.getElementById('vital-temp').textContent = temp;
+      document.getElementById('vital-temp').textContent = temp; 
+      const healthCards = document.getElementById('healthVitalCards');
+      if (healthCards) {
+        const fr = currentLang === 'fr';
+        const rows = [[fr?'Fréquence cardiaque':'Heart rate',hr,'bpm'],['SpO₂',spo2,'%'],[fr?'Variabilité FC':'Heart-rate variability',hrv,'ms'],[fr?'Pression artérielle':'Blood pressure',astro.bp,'mmHg'],[fr?'Température':'Temperature',temp,'°C'],[fr?'Glycémie':'Glucose',astro.glucose,'mg/dL']];
+        healthCards.innerHTML = rows.map(v => '<div class="health-metric"><div class="text-[10px] text-slate-400">'+v[0]+'</div><div class="mt-1 text-xl font-mono font-bold text-white">'+v[1]+'<span class="ml-1 text-[9px] font-normal text-slate-400">'+v[2]+'</span></div><div class="mt-1 text-[9px] text-amber-300">'+(fr?'SIMULÉ':'SIMULATED')+'</div></div>').join('');
+      }
     }
 
     setInterval(() => {
