@@ -15,6 +15,7 @@ This is not a medical device. It does not diagnose, prescribe, or use real medic
 - Sign-in is required. Passwords are hashed. Routes check the role on the server.
 - An astronaut can open only their own record.
 - A physician sees only assigned crewmembers.
+- Sleep, well-being, bone, muscle, and activity observations are stored in a role-scoped health log; astronauts can self-report and assigned physicians can add clinician observations.
 - Ground and admin accounts receive mission and alert status, not allergies, history, or nutrition plans.
 - Nutrition targets change with the person. Missing age, height, mass, sex, or activity produces no energy number.
 - Foods that conflict with a recorded allergy or intolerance are removed. The planner does not invent foods that are not on the mission menu.
@@ -23,7 +24,7 @@ This is not a medical device. It does not diagnose, prescribe, or use real medic
 - The cockpit Copilot supports multi-turn chat and symptom analysis through the server-side Google Gemini API. It receives only the synthetic snapshot shown in the cockpit; database alert reports continue to use the authenticated, role-scoped backend workflow.
 - The browser never receives an API key. The public demo Copilot endpoint has a basic per-IP rate limit; configure API spend limits before sharing the demo widely.
 
-The cockpit, ECG drawing, body map, and solar / CO2 buttons are a scripted visual simulator. Numbers on that cockpit are not the database. Nutrition, alerts, messages, ground, and admin screens are the database.
+The cockpit, ECG drawing, anatomical illustration, and solar / CO2 buttons include scripted demonstration data. They are not live sensor feeds. The anatomical map is an educational interaction, not clinical imaging. Recorded vital measurements and health-log entries are stored separately in PostgreSQL; their source and timestamps are shown in the health workspace. Nutrition, alerts, messages, ground, and admin screens use database records.
 
 ## Run
 
@@ -87,6 +88,7 @@ backend/src/auth          sign-in and session check
 backend/src/access        who can see a record
 backend/src/astronauts    profiles, symptoms, physician notes
 backend/src/vitals        measurements and alert creation
+backend/src/health        protected sleep, well-being, bone, muscle and activity logs
 backend/src/alerts        screening rules and alert lifecycle
 backend/src/nutrition     personal planner and menu
 backend/src/ai            rule analysis, optional external model
