@@ -3,11 +3,11 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
-// SQLite has no enums. Allowed strings live in src/common/constants.ts.
+// Allowed strings live in src/common/constants.ts.
 
 model User {
   id           String   @id @default(cuid())
