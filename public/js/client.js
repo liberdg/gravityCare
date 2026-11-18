@@ -119,6 +119,8 @@
     state.crew = await api('/api/astronauts');
     window.GC_MEDICAL_CREW = state.crew;
     window.GC_FETCH_VITALS = astronautId => api(`/api/vitals/astronaut/${encodeURIComponent(astronautId)}?limit=100`);
+    window.GC_FETCH_HEALTH_LOGS = astronautId => api(`/api/health-log/${encodeURIComponent(astronautId)}?limit=100`);
+    window.GC_CREATE_HEALTH_LOG = (astronautId, payload) => api('/api/health-log', { method: 'POST', body: JSON.stringify({ ...payload, astronautId }) });
     const select = document.getElementById('messageReceiver');
     select.innerHTML = '';
     if (state.user.role === 'ASTRONAUT') {
