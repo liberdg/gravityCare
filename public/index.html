@@ -1029,12 +1029,34 @@
       </div>
     </section>
 
-    <section id="view-ground" class="hidden space-y-4">
-      <div class="glass-card rounded-2xl p-4 sm:p-5">
-        <p class="text-[10px] font-mono uppercase tracking-widest text-slate-300" data-i18n="groundEyebrow">Ground operations</p>
-        <h2 class="font-display font-bold text-xl text-white mt-1" data-i18n="groundTitle">Mission picture</h2>
-        <p class="text-xs text-slate-400 mt-1" data-i18n="groundLead">Names, mission state, and alert level only.</p>
-        <div id="groundBody" class="mt-4"></div>
+    <section id="view-ground" class="hidden space-y-4 pb-6">
+      <div class="relative overflow-hidden rounded-3xl border border-sky-400/20 bg-gradient-to-br from-slate-900 via-slate-950 to-sky-950/40 p-5 sm:p-7">
+        <div class="absolute -right-16 -top-20 h-64 w-64 rounded-full border border-sky-400/10"></div>
+        <div class="absolute -right-5 -top-9 h-44 w-44 rounded-full border border-sky-400/10"></div>
+        <div class="relative flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
+          <div>
+            <p class="text-[10px] font-mono uppercase tracking-[0.24em] text-sky-300">ARTEMIS-IV · MISSION CONTROL</p>
+            <h2 class="font-display text-2xl sm:text-3xl font-bold text-white mt-2" data-i18n="groundTitle">Centre de contrôle de mission</h2>
+            <p class="text-sm text-slate-400 mt-2 max-w-2xl" data-i18n="groundLead">Vue opérationnelle de l’équipage : disponibilité de mission et suivi des alertes, sans données médicales confidentielles.</p>
+          </div>
+          <div class="flex items-center gap-3">
+            <div class="rounded-xl border border-emerald-400/20 bg-emerald-400/5 px-3 py-2">
+              <div class="text-[9px] font-mono uppercase tracking-widest text-slate-500" data-i18n="groundDataScope">Périmètre des données</div>
+              <div class="text-xs font-semibold text-emerald-300 mt-1" data-i18n="groundOperationalOnly">Opérationnel uniquement</div>
+            </div>
+            <button id="groundRefreshBtn" type="button" class="rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 px-4 py-2.5 text-xs font-bold transition-colors">
+              ↻ <span data-i18n="groundRefresh">Actualiser</span>
+            </button>
+          </div>
+        </div>
+        <div class="relative mt-5 flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-white/10 pt-4 text-[10px] font-mono text-slate-400">
+          <span><span class="inline-block w-2 h-2 rounded-full bg-emerald-400 mr-1.5"></span><span data-i18n="groundStatusConnected">Vue opérationnelle connectée</span></span>
+          <span id="groundLastRefresh">—</span>
+          <span data-i18n="groundFictionalNote">Données de démonstration fictives · pas de télémétrie temps réel</span>
+        </div>
+      </div>
+      <div id="groundBody" class="space-y-4" aria-live="polite">
+        <div class="glass-card rounded-2xl p-5 text-sm text-slate-400">Chargement de la situation de mission…</div>
       </div>
     </section>
 
