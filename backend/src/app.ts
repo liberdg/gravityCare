@@ -30,7 +30,7 @@ export function createApp() {
       status: 'ok',
       service: 'GravityCare API',
       version: '2.0.0',
-      ai: process.env.AI_API_KEY ? 'external-optional' : 'rules',
+      ai: process.env.AI_API_KEY ? (process.env.AI_PROVIDER || 'gemini') : 'rules',
       data: 'fictional-demo'
     });
   });
