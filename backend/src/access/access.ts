@@ -81,6 +81,7 @@ export function medicalView(profile: Awaited<ReturnType<typeof getProfileOrThrow
 export function operationalView(profile: Awaited<ReturnType<typeof getProfileOrThrow>>, alertSummary: unknown) {
   return {
     id: profile.id,
+    crewName: profile.user.firstName,
     callSign: profile.callSign,
     agency: profile.agency,
     fictitious: true,
