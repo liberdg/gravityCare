@@ -2350,6 +2350,19 @@
       Object.entries(texts).forEach(([id,value]) => { if (el(id)) el(id).textContent = value; });
       if (el('anatomySelectedCrew')) el('anatomySelectedCrew').textContent = astro.fullName + ' · ' + astro.agency;
       void loadRecordedVitals(astro);
+      void loadHealthLogs(astro);
+      const frForm = currentLang === 'fr';
+      const setPlaceholder = (id,value) => { const node=document.getElementById(id); if(node) node.placeholder=value; };
+      setPlaceholder('healthLogMetric', frForm ? 'Indicateur (ex. durée du sommeil)' : 'Metric (e.g. sleep duration)');
+      setPlaceholder('healthLogValue', frForm ? 'Valeur numérique (facultatif)' : 'Numeric value (optional)');
+      setPlaceholder('healthLogUnit', frForm ? 'Unité (h, %, kg…)' : 'Unit (h, %, kg…)');
+      setPlaceholder('healthLogText', frForm ? 'Valeur textuelle (facultatif)' : 'Text value (optional)');
+      setPlaceholder('healthLogNotes', frForm ? 'Notes facultatives' : 'Optional notes');
+      const logDomain = document.getElementById('healthLogDomain');
+      if (logDomain) logDomain.innerHTML = frForm ? '<option value="SLEEP">Sommeil</option><option value="WELLBEING">Bien-être psychologique</option><option value="BONE">Santé osseuse</option><option value="MUSCLE">Santé musculaire</option><option value="ACTIVITY">Activité physique</option>' : '<option value="SLEEP">Sleep</option><option value="WELLBEING">Psychological well-being</option><option value="BONE">Bone health</option><option value="MUSCLE">Muscle health</option><option value="ACTIVITY">Physical activity</option>';
+      const logTitle = document.getElementById('healthLogFormTitle'); if (logTitle) logTitle.textContent = frForm ? 'Ajouter une observation santé' : 'Add a health observation';
+      const logHistoryTitle = document.getElementById('healthLogHistoryTitle'); if (logHistoryTitle) logHistoryTitle.textContent = frForm ? 'Journal sommeil · bien-être · os · muscles' : 'Sleep · well-being · bone · muscle log';
+      const logSubmit = document.getElementById('healthLogSubmit'); if (logSubmit) logSubmit.textContent = frForm ? 'Enregistrer l’observation' : 'Save observation';
     }
 
     async function loadRecordedVitals(astro) {
@@ -2384,6 +2397,81 @@
       }
       const types = { HEART_RATE: currentLang === 'fr' ? 'Fréquence cardiaque' : 'Heart rate', SPO2: 'SpO₂', HRV: currentLang === 'fr' ? 'Variabilité FC' : 'HRV', BLOOD_PRESSURE: currentLang === 'fr' ? 'Pression artérielle' : 'Blood pressure', TEMPERATURE: currentLang === 'fr' ? 'Température' : 'Temperature' };
       panel.innerHTML = rows.map(row => '<div class="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-slate-950/70 border border-slate-800 px-3 py-2"><div><div class="text-xs text-white font-semibold">' + healthEsc(types[row.type] || row.type) + '</div><div class="text-[9px] text-slate-500">' + healthEsc(row.source || '—') + '</div></div><div class="text-right"><div class="font-mono text-sm text-sky-200">' + healthEsc(row.value) + ' ' + healthEsc(row.unit) + '</div><div class="text-[9px] text-slate-500">' + new Date(row.measuredAt).toLocaleString(currentLang === 'fr' ? 'fr-FR' : 'en-US') + '</div></div></div>').join('');
+    }
+
+    function findMedicalProfile(astro) {
+      const calls = { vance: 'CDR. Vance', chen: 'PLT. Chen', diallo: 'Dr. Diallo', tremblay: 'MS-2. Tremblay' };
+      return (window.GC_MEDICAL_CREW || []).find(item => item.callSign === calls[astro.id]);
+    }
+
+    async function loadHealthLogs(astro) {
+      const panel = document.getElementById('healthLogHistory');
+      if (!panel || !window.GC_FETCH_HEALTH_LOGS) return;
+      const profile = findMedicalProfile(astro);
+      if (!profile) {
+        panel.textContent = currentLang === 'fr' ? 'Dossier non accessible.' : 'Profile not accessible.';
+        return;
+      }
+      try {
+        const rows = await window.GC_FETCH_HEALTH_LOGS(profile.id);
+        const fr = currentLang === 'fr';
+        const domainNames = fr
+          ? {SLEEP:'Sommeil',WELLBEING:'Bien-être',BONE:'Osseux',MUSCLE:'Musculaire',ACTIVITY:'Activité'}
+          : {SLEEP:'Sleep',WELLBEING:'Well-being',BONE:'Bone',MUSCLE:'Muscle',ACTIVITY:'Activity'};
+        if (!rows.length) {
+          panel.innerHTML = '<p class="text-xs text-slate-500">' + (fr ? 'Aucune observation enregistrée pour le moment.' : 'No observations recorded yet.') + '</p>';
+          return;
+        }
+        panel.innerHTML = rows.slice(0,10).map(row => {
+          const value = row.numericValue !== null && row.numericValue !== undefined ? healthEsc(row.numericValue) + ' ' + healthEsc(row.unit || '') : healthEsc(row.textValue || '—');
+          return '<div class="rounded-lg bg-slate-950/70 border border-slate-800 px-3 py-2"><div class="flex justify-between gap-2"><strong class="text-xs text-white">' + healthEsc(domainNames[row.domain] || row.domain) + ' · ' + healthEsc(row.metric) + '</strong><span class="text-[9px] text-sky-300">' + healthEsc(row.source) + '</span></div><div class="text-sm font-mono text-sky-100 mt-1">' + value + '</div>' + (row.notes ? '<p class="text-[10px] text-slate-400 mt-1">' + healthEsc(row.notes) + '</p>' : '') + '<p class="text-[9px] text-slate-500 mt-1">' + new Date(row.recordedAt).toLocaleString(fr ? 'fr-FR' : 'en-US') + '</p></div>';
+        }).join('');
+      } catch (error) {
+        panel.textContent = currentLang === 'fr' ? 'Erreur lors du chargement du journal.' : 'Unable to load health log.';
+      }
+    }
+
+    async function submitHealthLog(event) {
+      event.preventDefault();
+      const astro = astronauts[currentAstroId];
+      const profile = findMedicalProfile(astro);
+      const feedback = document.getElementById('healthLogFeedback');
+      const button = document.getElementById('healthLogSubmit');
+      if (!profile || !window.GC_CREATE_HEALTH_LOG) {
+        feedback.textContent = currentLang === 'fr' ? 'Enregistrement indisponible pour cette session.' : 'Saving is unavailable in this session.';
+        return;
+      }
+      const raw = document.getElementById('healthLogValue').value.trim();
+      const textValue = document.getElementById('healthLogText').value.trim();
+      if (!raw && !textValue) {
+        feedback.textContent = currentLang === 'fr' ? 'Saisis une valeur numérique ou textuelle.' : 'Enter a numeric or text value.';
+        return;
+      }
+      const payload = {
+        domain: document.getElementById('healthLogDomain').value,
+        metric: document.getElementById('healthLogMetric').value.trim(),
+        numericValue: raw ? Number(raw) : undefined,
+        textValue: textValue || undefined,
+        unit: document.getElementById('healthLogUnit').value.trim() || undefined,
+        notes: document.getElementById('healthLogNotes').value.trim() || undefined
+      };
+      button.disabled = true;
+      button.textContent = currentLang === 'fr' ? 'Enregistrement…' : 'Saving…';
+      try {
+        await window.GC_CREATE_HEALTH_LOG(profile.id, payload);
+        document.getElementById('healthLogMetric').value = '';
+        document.getElementById('healthLogValue').value = '';
+        document.getElementById('healthLogUnit').value = '';
+        document.getElementById('healthLogText').value = '';
+        document.getElementById('healthLogNotes').value = '';
+        feedback.textContent = currentLang === 'fr' ? 'Observation enregistrée dans le dossier autorisé.' : 'Observation saved to the authorized record.';
+        await loadHealthLogs(astro);
+      } catch (error) {
+        feedback.textContent = error.message || (currentLang === 'fr' ? 'Échec de l’enregistrement.' : 'Could not save observation.');
+      } finally {
+        button.disabled = false;
+        button.textContent = currentLang === 'fr' ? 'Enregistrer l’observation' : 'Save observation';
+      }
     }
 
     function selectBodySystem(sysKey) {
