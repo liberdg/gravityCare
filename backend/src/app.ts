@@ -12,6 +12,7 @@ import { adminRouter } from './admin/admin.routes.js';
 import { reportsRouter } from './reports/reports.routes.js';
 import { demoRouter } from './demo/demo.routes.js';
 import { copilotRouter } from './copilot/copilot.routes.js';
+import { healthLogRouter } from './health/health.routes.js';
 import { errorHandler } from './common/errorHandler.js';
 import { authMiddleware } from './auth/auth.middleware.js';
 
@@ -40,6 +41,7 @@ export function createApp() {
   app.use('/api/copilot', copilotRouter);
   app.use('/api/astronauts', authMiddleware, astronautsRouter);
   app.use('/api/vitals', authMiddleware, vitalsRouter);
+  app.use('/api/health-log', authMiddleware, healthLogRouter);
   app.use('/api/nutrition', authMiddleware, nutritionRouter);
   app.use('/api/alerts', authMiddleware, alertsRouter);
   app.use('/api/messages', authMiddleware, messagesRouter);
